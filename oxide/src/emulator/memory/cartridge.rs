@@ -1,6 +1,7 @@
 mod mbc_type;
 
 use mbc_type::*;
+use log::{debug, info, warn};
 
 #[derive(debug)]
 pub struct Cartridge {
@@ -38,13 +39,30 @@ impl Cartridge {
 
         Ok(Self {
             raw_rom: raw,
-            rom_banks: raw.chunks(0x8000).collect(),
+            rom_banks: raw.chunks(0x4000).collect(),
             ram_banks: ram_bank,
             mbc: kind,
 
-            cur_rom: 0,
+            cur_rom: 1,
             cur_ram: 0,
             ram_enabled: if ram_bank.len() { true } else { false }
         })
+    }
+
+    pub fn read(addr: u16) -> u8 {
+        match (addr, self.mbc) {
+            (0x0000..0x3FFF, _) => self.rom_banks[0][addr],
+            (0x4000..0x7FFF, MbcKind::NO_MBC(_)) => self.rom_banks[1][addr],
+            (0xA000..0xBFFF, MbcKind::NO_MBC(value)) if value == 0x08 || value == 0x09 => self.ram_banks[0][addr - 0xA000],
+            _ => panic!("Unexpected memory access: Address = 0x{:X}, MBC = {}", addr, self.mbc)
+        }
+    }
+
+    pub fn write(addr: u16, value: u8) {
+        match (addr, self.mbc) {
+            (0x0000..0x7FFF, MbcKind::NO_MBC(_)) => warn!("Strange memory write to NO_MBC ROM: 0x{:#02X} => 0x{:#06X}", value, addr),
+            (0xA000..0x7FFF, MbcKind::NO_MBC(value)) if value == 0x08 || value == 0x09 => self.ram_banks[0][addr - 0xA000] = value,
+            _ => panic!("Unexpected memory write: Address = 0x{:X}, MBC = {}", addr, self.mbc)
+        };
     }
 }
