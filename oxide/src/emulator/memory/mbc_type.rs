@@ -1,4 +1,7 @@
-#[derive(debug)]
+use std::fmt;
+
+#[derive(Debug, Copy, Clone)]
+#[allow(non_camel_case_types)]
 pub enum MbcKind {
     NO_MBC(u8),
     MBC1(u8),
@@ -18,20 +21,19 @@ pub enum MbcKind {
 impl fmt::Display for MbcKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let s = match self {
-            NO_MBC(val) => format!("No Mbc ({})", value),
-            MBC1(val) => format!("MBC1 ({})", value),
-            MBC2(val) => format!("MBC2 ({})", value),
-            MBC3(val) => format!("MBC3 ({})", value),
-            MBC4(val) => format!("MBC4 ({})", value),
-            MBC5(val) => format!("MBC5 ({})", value),
-            MBC6(val) => format!("MBC6 ({})", value),
-            MBC7(val) => format!("MBC7 ({})", value),
-            MMM01(val) => format!("MMM01 ({})", value),
-            HUC1(val) => format!("HuC1 ({})", value),
-            HUC3(val) => format!("HuC3 ({})", value),
-            CAM(val) => format!("Camera ({})", value),
-            TAMA(val) => format!("Tama5 ({})", value),
-            _ => format!("Unknown Mbc")
+            MbcKind::NO_MBC(val) => format!("No Mbc ({})", val),
+            MbcKind::MBC1(val) => format!("MBC1 ({})", val),
+            MbcKind::MBC2(val) => format!("MBC2 ({})", val),
+            MbcKind::MBC3(val) => format!("MBC3 ({})", val),
+            MbcKind::MBC4(val) => format!("MBC4 ({})", val),
+            MbcKind::MBC5(val) => format!("MBC5 ({})", val),
+            MbcKind::MBC6(val) => format!("MBC6 ({})", val),
+            MbcKind::MBC7(val) => format!("MBC7 ({})", val),
+            MbcKind::MMM01(val) => format!("MMM01 ({})", val),
+            MbcKind::HUC1(val) => format!("HuC1 ({})", val),
+            MbcKind::HUC3(val) => format!("HuC3 ({})", val),
+            MbcKind::CAM(val) => format!("Camera ({})", val),
+            MbcKind::TAMA(val) => format!("Tama5 ({})", val),
         };
 
         write!(f, "{}", s)

@@ -1,13 +1,15 @@
-mod mbc_type;
+use crate::emulator::memory::mbc_type::*;
 
-use mbc_type::*;
+#[allow(unused_imports)]
 use log::{debug, info, warn};
 
-#[derive(debug)]
+use std::path::Path;
+use std::fs;
+
+#[derive(Debug)]
 pub struct Cartridge {
-    raw_rom: Vec<u8>,
-    rom_banks: Vec<&[u8]>, // Rom Banks
-    ram_banks: Vec<Vec<u8>>, // Ram Banks
+    rom_banks: Vec<[u8; 0x4000]>, // Rom Banks
+    ram_banks: Vec<[u8; 0x2000]>, // Ram Banks
     mbc: MbcKind,
 
     cur_rom: usize, // Current Rom Bank index
@@ -22,46 +24,53 @@ impl Cartridge {
         let kind = MbcKind::from_u8(raw[0x0147]);
 
         match kind {
-            MbcKind::NO_MBC => Self::load_no_mbc(raw, kind),
+            Some(MbcKind::NO_MBC(_)) => Self::load_no_mbc(raw, kind.unwrap()),
             None => Err(format!("Unknown cartridge type value: {}", raw[0x0147])),
-            _ => Err(format!("MBC Kind {} not yet implemented !", kind))
+            _ => Err(format!("MBC Kind {} not yet implemented !", kind.unwrap()))
         }
     }
 
     fn load_no_mbc(raw: Vec<u8>, kind: MbcKind) -> Result<Self, String> {
-        let ram_bank = match kind {
-            MbcKind::NO_MBC(value) if value == 0x00 => Vec::new(),
-            MbcKind::NO_MBC(value) if value == 0x08 => vec![vec![0, 0x2000], 1],
-            MbcKind::NO_MBC(value) if value == 0x09 => vec![vec![0, 0x2000], 1],
+        let ram_banks = match kind {
+            MbcKind::NO_MBC(value) if value == 0x00 => Ok(vec![[0; 0x2000]; 0]),
+            MbcKind::NO_MBC(value) if value == 0x08 => Ok(vec![[0; 0x2000]; 1]),
+            MbcKind::NO_MBC(value) if value == 0x09 => Ok(vec![[0; 0x2000]; 1]),
             MbcKind::NO_MBC(value) => Err(format!("MBC Type error. 0x{:X} is not a valid NO_MBC value.", value)),
             _ => Err("Should be unreachable".to_string())
         }?;
 
+        let rom_banks: Vec<[u8; 0x4000]> = raw.chunks(0x4000)
+                                              .map(|x| {
+                                                  let chunk: &[u8] = x;
+                                                  <[u8; 0x4000]>::try_from(chunk).expect("Incomplete ROM: chunk size is less than 0x4000")
+                                              }).collect();
+
+        let enabled = if ram_banks.len() == 1 { true } else {false};
+
         Ok(Self {
-            raw_rom: raw,
-            rom_banks: raw.chunks(0x4000).collect(),
-            ram_banks: ram_bank,
+            rom_banks,
+            ram_banks,
             mbc: kind,
 
             cur_rom: 1,
             cur_ram: 0,
-            ram_enabled: if ram_bank.len() { true } else { false }
+            ram_enabled: enabled
         })
     }
 
-    pub fn read(addr: u16) -> u8 {
+    pub fn read(&self, addr: u16) -> u8 {
         match (addr, self.mbc) {
-            (0x0000..0x3FFF, _) => self.rom_banks[0][addr],
-            (0x4000..0x7FFF, MbcKind::NO_MBC(_)) => self.rom_banks[1][addr],
-            (0xA000..0xBFFF, MbcKind::NO_MBC(value)) if value == 0x08 || value == 0x09 => self.ram_banks[0][addr - 0xA000],
+            (0x0000..=0x3FFF, _) => self.rom_banks[0][addr as usize],
+            (0x4000..=0x7FFF, MbcKind::NO_MBC(_)) => self.rom_banks[1][addr as usize],
+            (0xA000..=0xBFFF, MbcKind::NO_MBC(value)) if value == 0x08 || value == 0x09 => self.ram_banks[0][(addr - 0xA000) as usize],
             _ => panic!("Unexpected memory access: Address = 0x{:X}, MBC = {}", addr, self.mbc)
         }
     }
 
-    pub fn write(addr: u16, value: u8) {
+    pub fn write(&mut self, addr: u16, value: u8) {
         match (addr, self.mbc) {
-            (0x0000..0x7FFF, MbcKind::NO_MBC(_)) => warn!("Strange memory write to NO_MBC ROM: 0x{:#02X} => 0x{:#06X}", value, addr),
-            (0xA000..0x7FFF, MbcKind::NO_MBC(value)) if value == 0x08 || value == 0x09 => self.ram_banks[0][addr - 0xA000] = value,
+            (0x0000..=0x7FFF, MbcKind::NO_MBC(_)) => warn!("Strange memory write to NO_MBC ROM: 0x{:#02X} => 0x{:#06X}", value, addr),
+            (0xA000..=0xBFFF, MbcKind::NO_MBC(value)) if value == 0x08 || value == 0x09 => self.ram_banks[0][(addr - 0xA000) as usize] = value,
             _ => panic!("Unexpected memory write: Address = 0x{:X}, MBC = {}", addr, self.mbc)
         };
     }

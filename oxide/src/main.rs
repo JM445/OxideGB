@@ -1,3 +1,7 @@
+mod emulator;
+
+use crate::emulator::bus::Bus;
+
 fn main() {
-    println!("Hello, world!");
+    let _bus = Bus::new("./ROMs/Tetris.gb".to_string());
 }
