@@ -1,4 +1,4 @@
-use crate::emulator::memory::mbc_type::*;
+use super::mbc_type::*;
 
 #[allow(unused_imports)]
 use log::{debug, info, warn};
@@ -16,7 +16,6 @@ pub struct Cartridge {
     cur_ram: usize, // Current Ram Bank index
     ram_enabled: bool,
 }
-
 
 impl Cartridge {
     pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, String> {
