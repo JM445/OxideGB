@@ -18,6 +18,9 @@
               # Necessary for the openssl-sys crate:
               pkgs.openssl
               pkgs.pkg-config
+
+              # GB Dev tools
+              pkgs.rgbds
             ];
           };
         }

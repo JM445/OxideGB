@@ -20,4 +20,7 @@ target/
 
 .direnv
 
-ROMs/*
+*.gb
+*.o
+
+oxide.zip
