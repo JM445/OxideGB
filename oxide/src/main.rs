@@ -1,7 +1,15 @@
-mod emulator;
+pub mod emulator;
+pub mod debugger;
 
 use crate::emulator::*;
 
 fn main() {
-    let _bus = Emulator::new("./ROMs/Tetris.gb".to_string());
+    let mut emu = Emulator::new("../ROMs/Tests/test.gb".to_string()).unwrap();
+
+    emu.tick();
+    emu.tick();
+    emu.tick();
+    emu.tick();
+    emu.tick();
+    emu.tick();
 }

@@ -5,30 +5,35 @@ use crate::emulator::memory::Bus;
 
 use super::*;
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum MicroOp {
     DataMove {source: RWTarget, dest: RWTarget, prefetch: bool},
     Operation{ope: Operation, prefetch: bool},
     ReadIMM{prefetch: bool},
     ReadLSB{prefetch: bool},
     ReadMSB{prefetch: bool},
+    PrefetchOnly
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum RWTarget {
     Reg8(Reg8),
     Reg16(Reg16),
     Addr(u16),
+    Indirect16(Reg16),
+    Indirect8(Reg8),
     Tmp8,
     Tmp16,
     IR,
     IE,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum Operation {
     Add{left: RWTarget, right: RWTarget, dest: RWTarget},
     Sub{left: RWTarget, right: RWTarget, dest: RWTarget},
+    Inc{dest: RWTarget},
+    Dec{dest: RWTarget}
 }
 
 impl Cpu {
@@ -37,6 +42,8 @@ impl Cpu {
             RWTarget::Reg8(trg) => self.read8(trg) as u16,
             RWTarget::Reg16(trg) => self.read16(trg),
             RWTarget::Addr(trg) => bus.read(trg) as u16,
+            RWTarget::Indirect8(_) => panic!("Unimplemented Indirect read !"),
+            RWTarget::Indirect16(trg) => bus.read(self.read16(trg)) as u16,
             RWTarget::Tmp8 => self.tmp8 as u16,
             RWTarget::Tmp16 => self.tmp16,
             RWTarget::IR => self.ir as u16,
@@ -49,6 +56,8 @@ impl Cpu {
             RWTarget::Reg8(trg) => self.write8(trg, value as u8),
             RWTarget::Reg16(trg) => self.write16(trg, value),
             RWTarget::Addr(trg) => bus.write(trg, value as u8),
+            RWTarget::Indirect8(_) => panic!("Unimplemented Indirect write !"),
+            RWTarget::Indirect16(trg) => bus.write(self.read16(trg), value as u8),
             RWTarget::Tmp8 => self.tmp8 = value as u8,
             RWTarget::Tmp16 => self.tmp16 = value,
             RWTarget::IR => self.ir = value as u8,
@@ -63,6 +72,7 @@ impl Cpu {
             MicroOp::ReadIMM{prefetch} |
             MicroOp::ReadLSB{prefetch} |
             MicroOp::ReadMSB{prefetch} => *prefetch,
+            MicroOp::PrefetchOnly => true
         };
 
         match op {
@@ -71,6 +81,7 @@ impl Cpu {
             MicroOp::ReadIMM{..} => self.execute_imm(bus),
             MicroOp::ReadLSB{..}  => self.execute_read_lsb(bus),
             MicroOp::ReadMSB{..}  => self.execute_read_msb(bus),
+            MicroOp::PrefetchOnly => (),
         };
 
         if prefetch {
@@ -95,6 +106,15 @@ impl Cpu {
                 let rval = self.get_target(right, bus);
                 self.set_target(dest, lval - rval, bus);
             },
+            Operation::Inc {dest} => {
+                let val = self.get_target(dest, bus);
+                self.set_target(dest, val + 1, bus);
+            },
+            Operation::Dec {dest} => {
+                let val = self.get_target(dest, bus);
+                self.set_target(dest, val - 1, bus);
+            }
+
         }
     }
 
@@ -118,5 +138,6 @@ impl Cpu {
     fn execute_prefetch(&mut self, bus: &Bus) {
         self.ir = bus.read(self.pc);
         self.pc += 1;
+        self.next_ops.append(&mut Self::decode(self.ir));
     }
 }

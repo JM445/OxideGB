@@ -1,10 +1,13 @@
 pub mod registers;
 pub mod micro_ops;
+pub mod decoder;
 
 use registers::*;
 use micro_ops::*;
+use decoder::*;
 
 use crate::emulator::memory::Bus;
+use crate::debugger::DebuggerKind;
 
 use std::collections::VecDeque;
 
@@ -53,11 +56,12 @@ impl Cpu {
         }
     }
 
-    pub fn tick(&mut self, bus: &mut Bus) {
+    pub fn tick(&mut self, bus: &mut Bus, dbg: &mut DebuggerKind) {
         let res = self.next_ops.pop_front();
         match res {
             Some(op) => self.execute(op, bus),
-            None => ()
-        }
+            None => self.execute(MicroOp::PrefetchOnly, bus)
+        };
+
     }
 }
