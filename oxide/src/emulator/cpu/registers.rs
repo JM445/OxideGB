@@ -82,12 +82,12 @@ impl Cpu {
                 self.e = value as u8;
             },
             Reg16::HL => {
-                self.b = (value >> 8) as u8;
-                self.c = value as u8;
+                self.h = (value >> 8) as u8;
+                self.l = value as u8;
             },
             Reg16::SP => self.sp = value,
             Reg16::PC => self.sp = value,
-        }
+        };
     }
 }
 

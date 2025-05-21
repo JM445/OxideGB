@@ -1,16 +1,23 @@
 pub mod registers;
 pub mod micro_ops;
 pub mod decoder;
+pub mod displays;
 
 use registers::*;
 use micro_ops::*;
 use decoder::*;
+use displays::*;
 
 use crate::emulator::memory::Bus;
 use crate::debugger::DebuggerKind;
+use crate::debugger::DebugEvent;
 
 use std::collections::VecDeque;
 
+#[allow(unused_imports)]
+use log::{debug, info, warn, error};
+
+#[derive(Debug)]
 pub struct Cpu {
     pub a: u8, // Accumulator
     pub f: u8, // Flags
@@ -59,9 +66,9 @@ impl Cpu {
     pub fn tick(&mut self, bus: &mut Bus, dbg: &mut DebuggerKind) {
         let res = self.next_ops.pop_front();
         match res {
-            Some(op) => self.execute(op, bus),
-            None => self.execute(MicroOp::PrefetchOnly, bus)
+            Some(op) => self.execute(op, bus, dbg),
+            None => self.execute(MicroOp::PrefetchOnly, bus, dbg)
         };
-
+        debug!("Current CPU State: {self:?}")
     }
 }

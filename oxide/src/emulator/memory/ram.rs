@@ -30,11 +30,11 @@ impl Ram {
             0xC000..=0xCFFF => self.wram[(addr - 0xC000) as usize],
             0xD000..=0xDFFF => self.wram_banks[self.cur_wram][(addr - 0xD000) as usize],
             0xE000..=0xEFFF => {
-                warn!("Strange memory read to Echo RAM: 0x{:#06X}", addr);
+                warn!("Strange memory read to Echo RAM: {:#04X}", addr);
                 self.wram[(addr - 0xE000) as usize]
             },
             0xF000..=0xFDFF => {
-                warn!("Strange memory read to Echo RAM: 0x{:#06X}", addr);
+                warn!("Strange memory read to Echo RAM: {:#04X}", addr);
                 self.wram_banks[(self.cur_wram) as usize][(addr - 0xF000) as usize]
             },
             0xFE00..=0xFE9F => self.oam[(addr - 0xFE00) as usize],
@@ -49,11 +49,11 @@ impl Ram {
             0xC000..=0xCFFF => self.wram[(addr - 0xC000) as usize] = value,
             0xD000..=0xDFFF => self.wram_banks[self.cur_wram][(addr - 0xD000) as usize] = value,
             0xE000..=0xEFFF => {
-                warn!("Strange memory write to Echo RAM: 0x{:#02X} => 0x{:#06X}", value, addr);
+                warn!("Strange memory write to Echo RAM: {:#02X} => {:#04X}", value, addr);
                 self.wram[(addr - 0xE000) as usize] = value;
             },
             0xF000..=0xFDFF => {
-                warn!("Strange memory write to Echo RAM: 0x{:#02X} => 0x{:#06X}", value, addr);
+                warn!("Strange memory write to Echo RAM: {:#02X} => {:#04X}", value, addr);
                 self.wram_banks[self.cur_wram][(addr - 0xF000) as usize] = value;
             },
             0xFE00..=0xFE9F => self.oam[(addr - 0xFE00) as usize] = value,

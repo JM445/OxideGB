@@ -33,7 +33,7 @@ impl Bus {
             0x0000..=0x7FFF | 0xA000..=0xBFFF => self.cartridge.read(addr),
             0x8000..=0x9FFF | 0xC000..=0xEFFF | 0xF000..=0xFE9F | 0xFF80..=0xFFFE => self.ram.read(addr),
             0xFEA0..=0xFEFF => {
-                warn!("Memory read to prohibited zone: {:#06X}", addr);
+                warn!("Memory read to prohibited zone: {:#04X}", addr);
                 0xFF
             },
             0xFF00..=0xFF7F => self.read_regs(addr),
@@ -48,7 +48,7 @@ impl Bus {
         match addr {
             0x0000..=0x7FFF | 0xA000..=0xBFFF => self.cartridge.write(addr, value),
             0x8000..=0x9FFF | 0xC000..=0xEFFF | 0xF000..=0xFE9F | 0xFF80..=0xFFFE => self.ram.write(addr, value),
-            0xFEA0..=0xFEFF => warn!("Memory write to prohibited zone: {:#06X}", addr),
+            0xFEA0..=0xFEFF => warn!("Memory write to prohibited zone: {:#04X}", addr),
             0xFF00..=0xFF7F => self.write_regs(addr, value),
             _ => ()
         }

@@ -62,10 +62,10 @@ impl Cpu {
             RWTarget::Tmp16 => self.tmp16 = value,
             RWTarget::IR => self.ir = value as u8,
             RWTarget::IE => self.ie = value as u8
-        }
+        };
     }
 
-    pub(super) fn execute(&mut self, op: MicroOp, bus: &mut Bus) {
+    pub(super) fn execute(&mut self, op: MicroOp, bus: &mut Bus, dbg: &mut DebuggerKind) {
         let prefetch = match &op {
             MicroOp::DataMove{prefetch, ..} |
             MicroOp::Operation{prefetch, ..} |
@@ -76,7 +76,7 @@ impl Cpu {
         };
 
         match op {
-            MicroOp::DataMove{source, dest, ..} => self.execute_move(source, dest, bus),
+            MicroOp::DataMove{source, dest, ..} => self.execute_move(source, dest, bus, dbg),
             MicroOp::Operation{ope, ..} => self.execute_op(ope, bus),
             MicroOp::ReadIMM{..} => self.execute_imm(bus),
             MicroOp::ReadLSB{..}  => self.execute_read_lsb(bus),
@@ -85,13 +85,23 @@ impl Cpu {
         };
 
         if prefetch {
+            let old_opcode = self.ir;
             self.execute_prefetch(bus);
+            dbg.on_cpu_event(DebugEvent::IrPrefetch(self.ir), self, bus);
+            dbg.on_cpu_event(DebugEvent::InstructionEnd(old_opcode), self, bus);
         }
+        dbg.on_cpu_event(DebugEvent::MicroOpEnd(op), self, bus);
+
     }
 
-    fn execute_move(&mut self, source: RWTarget, dest: RWTarget, bus: &mut Bus) {
+    fn execute_move(&mut self, source: RWTarget, dest: RWTarget, bus: &mut Bus, dbg: &mut DebuggerKind) {
         let val = self.get_target(source, bus);
         self.set_target(dest, val, bus);
+        match dest {
+            RWTarget::Reg8(trg) => dbg.on_cpu_event(DebugEvent::Register8Change(trg, val as u8), self, bus),
+            RWTarget::Reg16(trg) => dbg.on_cpu_event(DebugEvent::Register16Change(trg, val), self, bus),
+            _ => ()
+        };
     }
 
     fn execute_op(&mut self, op: Operation, bus: &mut Bus) {

@@ -34,7 +34,7 @@ impl Cartridge {
             MbcKind::NO_MBC(value) if value == 0x00 => Ok(vec![[0; 0x2000]; 0]),
             MbcKind::NO_MBC(value) if value == 0x08 => Ok(vec![[0; 0x2000]; 1]),
             MbcKind::NO_MBC(value) if value == 0x09 => Ok(vec![[0; 0x2000]; 1]),
-            MbcKind::NO_MBC(value) => Err(format!("MBC Type error. 0x{:X} is not a valid NO_MBC value.", value)),
+            MbcKind::NO_MBC(value) => Err(format!("MBC Type error. {:#02X} is not a valid NO_MBC value.", value)),
             _ => Err("Should be unreachable".to_string())
         }?;
 
@@ -62,15 +62,15 @@ impl Cartridge {
             (0x0000..=0x3FFF, _) => self.rom_banks[0][addr as usize],
             (0x4000..=0x7FFF, MbcKind::NO_MBC(_)) => self.rom_banks[1][addr as usize],
             (0xA000..=0xBFFF, MbcKind::NO_MBC(value)) if value == 0x08 || value == 0x09 => self.ram_banks[0][(addr - 0xA000) as usize],
-            _ => panic!("Unexpected memory access: Address = 0x{:X}, MBC = {}", addr, self.mbc)
+            _ => panic!("Unexpected memory access: Address = {:#04X}, MBC = {}", addr, self.mbc)
         }
     }
 
     pub fn write(&mut self, addr: u16, value: u8) {
         match (addr, self.mbc) {
-            (0x0000..=0x7FFF, MbcKind::NO_MBC(_)) => warn!("Strange memory write to NO_MBC ROM: 0x{:#02X} => 0x{:#06X}", value, addr),
+            (0x0000..=0x7FFF, MbcKind::NO_MBC(_)) => warn!("Strange memory write to NO_MBC ROM: {:#02X} => {:#04X}", value, addr),
             (0xA000..=0xBFFF, MbcKind::NO_MBC(value)) if value == 0x08 || value == 0x09 => self.ram_banks[0][(addr - 0xA000) as usize] = value,
-            _ => panic!("Unexpected memory write: Address = 0x{:X}, MBC = {}", addr, self.mbc)
+            _ => panic!("Unexpected memory write: Address = {:#04X}, MBC = {}", addr, self.mbc)
         };
     }
 }

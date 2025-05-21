@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 log = "0.4"
+env_logger = "0.11"
 
 [features]
 log_mem_access = []
