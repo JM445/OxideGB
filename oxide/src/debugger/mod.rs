@@ -1,5 +1,5 @@
-mod full_debugger;
-mod displays;
+pub mod full_debugger;
+pub mod displays;
 
 use full_debugger::*;
 

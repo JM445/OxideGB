@@ -15,8 +15,6 @@ pub struct Emulator {
     cpu: Cpu,
     bus: Bus,
     ppu: Ppu,
-
-    debugger: DebuggerKind,
 }
 
 impl Emulator {
@@ -25,13 +23,11 @@ impl Emulator {
             cpu: Cpu::new(),
             bus: Bus::new(rom_path)?,
             ppu: Default::default(),
-
-            debugger: DebuggerKind::Log(LogDebugger::default())
         })
     }
 
-    pub fn tick(&mut self) {
-        self.cpu.tick(&mut self.bus, &mut self.debugger);
-        self.ppu.tick(&mut self.bus, &mut self.debugger);
+    pub fn tick(&mut self, dbg: &mut DebuggerKind) {
+        self.cpu.tick(&mut self.bus, dbg);
+        self.ppu.tick(&mut self.bus, dbg);
     }
 }
