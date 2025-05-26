@@ -1,5 +1,6 @@
 pub mod full_debugger;
 pub mod displays;
+pub mod tui;
 
 use full_debugger::*;
 
