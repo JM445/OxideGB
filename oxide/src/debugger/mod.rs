@@ -1,6 +1,7 @@
 pub mod full_debugger;
 pub mod displays;
 pub mod tui;
+pub mod dissassembler;
 
 use full_debugger::*;
 

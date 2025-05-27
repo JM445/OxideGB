@@ -21,6 +21,10 @@
 
               # GB Dev tools
               pkgs.rgbds
+
+              # Python
+              pkgs.python312
+              pkgs.python312Packages.requests
             ];
           };
         }

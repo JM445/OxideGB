@@ -1,5 +1,6 @@
 pub mod memory;
 pub mod ppu;
+
 pub mod cpu;
 
 use memory::*;
@@ -12,9 +13,9 @@ use crate::debugger::*;
 use std::path::Path;
 
 pub struct Emulator {
-    cpu: Cpu,
-    bus: Bus,
-    ppu: Ppu,
+    pub cpu: Cpu,
+    pub bus: Bus,
+    pub ppu: Ppu,
 }
 
 impl Emulator {

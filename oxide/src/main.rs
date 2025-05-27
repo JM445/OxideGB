@@ -6,13 +6,18 @@ use crate::debugger::{*, full_debugger::*};
 
 use std::fmt;
 use clap::{Parser,ValueEnum};
+use debugger::tui::tui_main;
 use debugger::DummyDebugger;
 
 #[derive(Parser)]
 #[command(version, about, name = "OxideGB")]
 struct Cli {
+    /// Wich debugger to use.
     #[arg(short, long, default_value_t = DebugMode::None)]
-    debug: DebugMode
+    debug: DebugMode,
+
+    /// Path of the GB ROM to load
+    rom_path: String
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
@@ -41,7 +46,6 @@ impl fmt::Display for DebugMode {
 
 fn main() {
     let cli = Cli::parse();
-    let mut emu = Emulator::new("../ROMs/Tests/test.gb".to_string()).unwrap();
 
     env_logger::init();
 
@@ -51,10 +55,18 @@ fn main() {
         DebugMode::Full => DebuggerKind::Full(FullDebugger::default()),
     };
 
-    emu.tick(&mut dbg);
-    emu.tick(&mut dbg);
-    emu.tick(&mut dbg);
-    emu.tick(&mut dbg);
-    emu.tick(&mut dbg);
-    emu.tick(&mut dbg);
+    match cli.debug {
+        DebugMode::Full => {
+            let _ = tui_main(cli.rom_path);
+        }
+        _ => {
+            let mut emu = Emulator::new("../ROMs/Tests/test.gb".to_string()).unwrap();
+            emu.tick(&mut dbg);
+            emu.tick(&mut dbg);
+            emu.tick(&mut dbg);
+            emu.tick(&mut dbg);
+            emu.tick(&mut dbg);
+            emu.tick(&mut dbg);
+        }
+    }
 }

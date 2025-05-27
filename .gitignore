@@ -24,3 +24,5 @@ target/
 *.o
 
 oxide.zip
+
+opcode_writer/*.txt
