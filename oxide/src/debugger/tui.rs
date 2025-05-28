@@ -1,14 +1,18 @@
+
 use crate::emulator::*;
+use super::ui_logger::UiLogger;
 use super::*;
 
 use self::dissassembler::*;
+use self::ui_utils::*;
+use self::ui_logger::*;
 
-use std::{fmt, io};
+use std::{fmt, io, any::Any};
 use std::path::Path;
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect, Alignment},
-    widgets::{Block, Borders, Paragraph, Padding, Table, Row, Cell},
+    widgets::{Block, Borders, Paragraph, Padding, Table, Row, Cell, Wrap},
     text::{Line, Span},
     Frame,
     style::Stylize,
@@ -50,11 +54,13 @@ impl Ui {
             .direction(Direction::Horizontal)
             .constraints(vec![
                 Constraint::Min(50),
+                Constraint::Min(58),
                 Constraint::Percentage(100)
             ]).split(top_down[0]);
 
         frame.render_widget(self.draw_dissassembly(top_split[0].height), top_split[0]);
         frame.render_widget(self.draw_memory(top_split[1].height), top_split[1]);
+        frame.render_widget(self.draw_logger(), top_split[2]);
         frame.render_widget(
             Block::default()
                 .title(Line::from("CMD").left_aligned())
@@ -62,17 +68,35 @@ impl Ui {
         frame.render_widget(self.draw_registers(), down_split[1]);
     }
 
+    fn draw_logger(&self) -> Paragraph {
+        if let Some(logger) = (&log::logger() as &dyn LogAsAny).as_any().downcast_ref::<UiLogger>() {
+            let lines = logger.entries.lock().unwrap().iter().map(|e| format_log(e.clone())).collect::<Vec<Line>>();
+
+            Paragraph::new(lines).block(Block::default()
+                                        .title(Line::from("Log").right_aligned())
+                                        .borders(Borders::ALL))
+                                 .wrap(Wrap {trim: false})
+                .alignment(Alignment::Left)
+        } else {
+            Paragraph::new("Logger error: The system logger is not initialized").block(
+                Block::default()
+                    .title(Line::from("Log").right_aligned())
+                    .borders(Borders::ALL)
+            )
+        }
+    }
+
     fn draw_memory(&self, size: u16) -> Table {
         let mut rows = Vec::new();
         let mut sizes = vec![Constraint::Length(6)];
         let row_sz = 16;
 
-        for cur in 0..row_sz {
+        for _ in 0..row_sz {
             sizes.push(Constraint::Length(2));
         }
 
         for cur in 0..size {
-            let mut row_data = vec![Cell::from(format!("{:04X} | ", self.memory_start + (cur * row_sz)))];
+            let mut row_data = vec![Cell::from(Span::from(format!("{:04X} | ", self.memory_start + (cur * row_sz))).blue().bold())];
             let mut tmp = self.emulator.bus.iter_at(self.memory_start + (cur * row_sz))
                                            .take(row_sz as usize)
                                            .map(|c| Cell::from(format!("{:02X}", c)))
@@ -83,7 +107,7 @@ impl Ui {
         }
         Table::new(rows, sizes).block(
             Block::default()
-                .title(Line::from("Memory").right_aligned())
+                .title(Line::from("Memory").centered())
                 .borders(Borders::ALL)
                 .padding(Padding::uniform(1))
         )
@@ -98,7 +122,7 @@ impl Ui {
             let bytes = mem.get_instruction(cur_sp);
             let len = get_instruction_length(bytes[0]) as u16;
             lines.push(Line::from(vec![
-                format!("{:#06X} | ", cur_sp).into(),
+                format!("{:#06X} | ", cur_sp).blue().bold().into(),
                 format!("{:<width$}", disassemble(&bytes), width=20).into(),
                 "| ".into(),
                 bytes.iter().take(len as usize).map(|x| format!("{:#04X}", x)).collect::<Vec<_>>().join(" ").into(),

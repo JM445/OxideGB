@@ -2,6 +2,8 @@ pub mod full_debugger;
 pub mod displays;
 pub mod tui;
 pub mod dissassembler;
+pub mod ui_utils;
+pub mod ui_logger;
 
 use full_debugger::*;
 

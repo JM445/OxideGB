@@ -8,6 +8,7 @@ use std::fmt;
 use clap::{Parser,ValueEnum};
 use debugger::tui::tui_main;
 use debugger::DummyDebugger;
+use debugger::ui_logger;
 
 #[derive(Parser)]
 #[command(version, about, name = "OxideGB")]
@@ -47,16 +48,20 @@ impl fmt::Display for DebugMode {
 fn main() {
     let cli = Cli::parse();
 
-    env_logger::init();
-
     let mut dbg = match cli.debug {
         DebugMode::None => DebuggerKind::Dummy(DummyDebugger::default()),
-        DebugMode::Log => DebuggerKind::Log(LogDebugger::default()),
-        DebugMode::Full => DebuggerKind::Full(FullDebugger::default()),
+        DebugMode::Log => {
+            env_logger::init();
+            DebuggerKind::Log(LogDebugger::default())
+        }
+        DebugMode::Full => {
+            DebuggerKind::Full(FullDebugger::default())
+        }
     };
 
     match cli.debug {
         DebugMode::Full => {
+            ui_logger::init();
             let _ = tui_main(cli.rom_path);
         }
         _ => {
