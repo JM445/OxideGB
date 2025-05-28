@@ -48,6 +48,8 @@ def get_operand(operand):
     match operand:
         case "d16":
             return "{:#06X}"
+        case "a16":
+            return "{:#06X}"
         case "d8":
             return "{:#04X}"
         case "(a16)":
@@ -61,6 +63,8 @@ def get_operand(operand):
 
 def get_argument(operand):
     match operand:
+        case "a16":
+            return ", ((bytes.get(2).copied().unwrap_or(0) as u16) << 8 | bytes.get(1).copied().unwrap_or(0) as u16)"
         case "d16":
             return ", ((bytes.get(2).copied().unwrap_or(0) as u16) << 8 | bytes.get(1).copied().unwrap_or(0) as u16)"
         case "d8":

@@ -8,7 +8,7 @@ use std::path::Path;
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect, Alignment},
-    widgets::{Block, Borders, Paragraph, Padding},
+    widgets::{Block, Borders, Paragraph, Padding, Table, Row, Cell},
     text::{Line, Span},
     Frame,
     style::Stylize,
@@ -16,6 +16,7 @@ use ratatui::{
 
 pub struct Ui {
     exit: bool,
+    memory_start: u16,
     emulator: Emulator,
 }
 
@@ -23,12 +24,11 @@ impl Ui {
     pub fn new(emu: Emulator) -> Ui {
         Ui {
             exit: false,
+            memory_start: 0x0000,
             emulator: emu
         }
     }
-}
 
-impl Ui {
     fn draw(&self, frame: &mut Frame) {
         let area = frame.area();
 
@@ -54,10 +54,7 @@ impl Ui {
             ]).split(top_down[0]);
 
         frame.render_widget(self.draw_dissassembly(top_split[0].height), top_split[0]);
-        frame.render_widget(
-            Block::default()
-                .title(Line::from("Memory").right_aligned())
-                .borders(Borders::ALL), top_split[1]);
+        frame.render_widget(self.draw_memory(top_split[1].height), top_split[1]);
         frame.render_widget(
             Block::default()
                 .title(Line::from("CMD").left_aligned())
@@ -65,7 +62,34 @@ impl Ui {
         frame.render_widget(self.draw_registers(), down_split[1]);
     }
 
-    pub fn draw_dissassembly(&self, size: u16) -> Paragraph {
+    fn draw_memory(&self, size: u16) -> Table {
+        let mut rows = Vec::new();
+        let mut sizes = vec![Constraint::Length(6)];
+        let row_sz = 16;
+
+        for cur in 0..row_sz {
+            sizes.push(Constraint::Length(2));
+        }
+
+        for cur in 0..size {
+            let mut row_data = vec![Cell::from(format!("{:04X} | ", self.memory_start + (cur * row_sz)))];
+            let mut tmp = self.emulator.bus.iter_at(self.memory_start + (cur * row_sz))
+                                           .take(row_sz as usize)
+                                           .map(|c| Cell::from(format!("{:02X}", c)))
+                                           .collect::<Vec<_>>();
+            row_data.append(&mut tmp);
+            let row = Row::new(row_data).height(1);
+            rows.push(row);
+        }
+        Table::new(rows, sizes).block(
+            Block::default()
+                .title(Line::from("Memory").right_aligned())
+                .borders(Borders::ALL)
+                .padding(Padding::uniform(1))
+        )
+    }
+
+    fn draw_dissassembly(&self, size: u16) -> Paragraph {
         let mut lines = Vec::new();
         let mut cur_sp = self.emulator.cpu.sp;
         let mem = &self.emulator.bus;
@@ -88,7 +112,7 @@ impl Ui {
                              .alignment(Alignment::Left)
     }
 
-    pub fn draw_registers(&self) -> Paragraph {
+    fn draw_registers(&self) -> Paragraph {
         let cpu = &self.emulator.cpu;
         let lines : Vec<Line>= vec![
             Line::from(vec![

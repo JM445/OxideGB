@@ -16,6 +16,20 @@ pub struct Bus {
     ioregs: Vec<u8>,
 }
 
+pub struct BusIter<'a> {
+    bus: &'a Bus,
+    iter_ptr: u16
+}
+
+impl<'a> Iterator for BusIter<'a> {
+    type Item = u8;
+    fn next(&mut self) -> Option<Self::Item> {
+        let value = self.bus.read(self.iter_ptr);
+        self.iter_ptr += 1;
+        Some(value)
+    }
+}
+
 impl Bus {
     pub fn new<P: AsRef<Path>>(rom_path: P) -> Result<Self, String> {
         Ok(Bus {
@@ -72,5 +86,19 @@ impl Bus {
     #[allow(unused_variables, dead_code)]
     fn write_regs(&mut self, addr: u16, value: u8) {
         ()
+    }
+
+    pub fn iter_at(&self, addr: u16) -> BusIter<'_> {
+        BusIter{
+            bus: &self,
+            iter_ptr: addr
+        }
+    }
+
+    pub fn iter(&self) -> BusIter<'_> {
+        BusIter {
+            bus: &self,
+            iter_ptr: 0x0000
+        }
     }
 }
