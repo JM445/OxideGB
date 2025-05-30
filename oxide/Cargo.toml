@@ -9,6 +9,8 @@ env_logger = "0.11"
 clap = { version = "4.5.38", features = ["derive"] }
 ratatui = "0.29.0"
 crossterm = "0.29.0"
+tui-textarea = "0.7.0"
+num-traits = "0.2.19"
 
 [features]
 log_mem_access = []

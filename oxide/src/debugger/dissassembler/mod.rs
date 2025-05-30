@@ -511,7 +511,7 @@ fn disassemble_prefixed(bytes: &[u8]) -> String {
     }
 }
 
-pub fn get_instruction_length(opcode: u8) -> u8 {
+pub fn get_instruction_length(opcode: u8) -> u16 {
     match opcode {
         0x0 => 1,
         0x1 => 3,

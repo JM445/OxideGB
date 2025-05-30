@@ -65,7 +65,9 @@ impl Cpu {
         };
     }
 
-    pub(super) fn execute(&mut self, op: MicroOp, bus: &mut Bus, dbg: &mut DebuggerKind) {
+    pub(super) fn execute<T>(&mut self, op: MicroOp, bus: &mut Bus, dbg: &mut T)
+    where T: Debugger
+    {
         let prefetch = match &op {
             MicroOp::DataMove{prefetch, ..} |
             MicroOp::Operation{prefetch, ..} |
@@ -94,7 +96,9 @@ impl Cpu {
 
     }
 
-    fn execute_move(&mut self, source: RWTarget, dest: RWTarget, bus: &mut Bus, dbg: &mut DebuggerKind) {
+    fn execute_move<T>(&mut self, source: RWTarget, dest: RWTarget, bus: &mut Bus, dbg: &mut T)
+    where T: Debugger
+    {
         let val = self.get_target(source, bus);
         self.set_target(dest, val, bus);
         match dest {

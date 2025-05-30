@@ -1,12 +1,13 @@
 use super::memory::*;
 
-use crate::debugger::DebuggerKind;
+use crate::debugger::Debugger;
 
 #[derive(Debug, Default)]
 pub struct Ppu {}
 
 impl Ppu {
-    pub fn tick(&mut self, bus: &mut Bus, dbg: &mut DebuggerKind) {
+    pub fn tick<T>(&mut self, bus: &mut Bus, dbg: &mut T)
+    where T: Debugger {
         ()
     }
 }

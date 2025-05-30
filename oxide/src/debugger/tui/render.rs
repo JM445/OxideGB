@@ -1,39 +1,22 @@
+use super::Ui;
+use super::dissassembler::*;
+use super::ui_utils::*;
+use super::ui_logger::*;
+use crate::emulator::cpu::registers::*;
 
-use crate::emulator::*;
-use super::ui_logger::UiLogger;
-use super::*;
-
-use self::dissassembler::*;
-use self::ui_utils::*;
-use self::ui_logger::*;
-
-use std::{fmt, io, any::Any};
-use std::path::Path;
-use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
-    layout::{Constraint, Direction, Layout, Rect, Alignment},
+    layout::{Constraint, Direction, Layout, Alignment},
     widgets::{Block, Borders, Paragraph, Padding, Table, Row, Cell, Wrap},
     text::{Line, Span},
     Frame,
     style::Stylize,
 };
+use std::sync::{Arc};
 
-pub struct Ui {
-    exit: bool,
-    memory_start: u16,
-    emulator: Emulator,
-}
+use log::debug;
 
-impl Ui {
-    pub fn new(emu: Emulator) -> Ui {
-        Ui {
-            exit: false,
-            memory_start: 0x0000,
-            emulator: emu
-        }
-    }
-
-    fn draw(&self, frame: &mut Frame) {
+impl<'a> Ui<'a> {
+    pub(super) fn draw(&self, frame: &mut Frame) {
         let area = frame.area();
 
         let top_down = Layout::default()
@@ -61,29 +44,20 @@ impl Ui {
         frame.render_widget(self.draw_dissassembly(top_split[0].height), top_split[0]);
         frame.render_widget(self.draw_memory(top_split[1].height), top_split[1]);
         frame.render_widget(self.draw_logger(), top_split[2]);
-        frame.render_widget(
-            Block::default()
-                .title(Line::from("CMD").left_aligned())
-                .borders(Borders::ALL), down_split[0]);
+        frame.render_widget(&self.cmd_area, down_split[0]);
         frame.render_widget(self.draw_registers(), down_split[1]);
     }
 
     fn draw_logger(&self) -> Paragraph {
-        if let Some(logger) = (&log::logger() as &dyn LogAsAny).as_any().downcast_ref::<UiLogger>() {
-            let lines = logger.entries.lock().unwrap().iter().map(|e| format_log(e.clone())).collect::<Vec<Line>>();
+        let logger = Arc::clone(&GLOB_LOGGER);
 
-            Paragraph::new(lines).block(Block::default()
-                                        .title(Line::from("Log").right_aligned())
-                                        .borders(Borders::ALL))
-                                 .wrap(Wrap {trim: false})
-                .alignment(Alignment::Left)
-        } else {
-            Paragraph::new("Logger error: The system logger is not initialized").block(
-                Block::default()
-                    .title(Line::from("Log").right_aligned())
-                    .borders(Borders::ALL)
-            )
-        }
+        let lines = (*logger).entries.lock().unwrap().iter().map(|e| format_log(e.clone())).collect::<Vec<Line>>();
+
+        Paragraph::new(lines).block(Block::default()
+                                    .title(Line::from("Log").right_aligned())
+                                    .borders(Borders::ALL))
+                             .wrap(Wrap {trim: false})
+                             .alignment(Alignment::Left)
     }
 
     fn draw_memory(&self, size: u16) -> Table {
@@ -115,19 +89,25 @@ impl Ui {
 
     fn draw_dissassembly(&self, size: u16) -> Paragraph {
         let mut lines = Vec::new();
-        let mut cur_sp = self.emulator.cpu.sp;
+        let mut cur_pc = self.top_pc;
         let mem = &self.emulator.bus;
 
         for _ in 0..size {
-            let bytes = mem.get_instruction(cur_sp);
-            let len = get_instruction_length(bytes[0]) as u16;
+            let bytes = mem.get_instruction(cur_pc);
+            let len = get_instruction_length(bytes[0]);
             lines.push(Line::from(vec![
-                format!("{:#06X} | ", cur_sp).blue().bold().into(),
-                format!("{:<width$}", disassemble(&bytes), width=20).into(),
+                format!("{:#06X} | ", cur_pc).blue().bold().into(),
+                if cur_pc >= self.emulator.cpu.pc - 1 &&
+                    cur_pc < self.emulator.cpu.pc + get_instruction_length(self.emulator.bus.read(self.emulator.cpu.pc)) - 1
+                {
+                    format!("{:<width$}", disassemble(&bytes), width=20).reversed().into()
+                } else {
+                    format!("{:<width$}", disassemble(&bytes), width=20).into()
+                },
                 "| ".into(),
                 bytes.iter().take(len as usize).map(|x| format!("{:#04X}", x)).collect::<Vec<_>>().join(" ").into(),
             ]));
-            cur_sp += len;
+            cur_pc += len;
         }
         Paragraph::new(lines).block(Block::default()
                                     .title(Line::from("Disassembly").left_aligned())
@@ -169,33 +149,4 @@ impl Ui {
                                     .padding(Padding::uniform(1)))
                              .alignment(Alignment::Center)
     }
-
-    pub fn run(&mut self) -> io::Result<()> {
-        let mut term = ratatui::init();
-
-        while !self.exit {
-            term.draw(|frame| self.draw(frame))?;
-            self.handle_events()?;
-        }
-
-        ratatui::restore();
-        Ok(())
-    }
-
-    fn handle_events(&mut self) -> io::Result<()> {
-        match event::read()? {
-            Event::Key(key_event) if key_event.kind == KeyEventKind::Press => {
-                self.exit = true;
-            }
-            _ => {}
-        };
-
-        Ok(())
-    }
-}
-
-pub fn tui_main<P: AsRef<Path>>(rom_path: P) -> Result<(), String> {
-    let mut ui = Ui::new(Emulator::new(rom_path)?);
-    ui.run();
-    Ok(())
 }

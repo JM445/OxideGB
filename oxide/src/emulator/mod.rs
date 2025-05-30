@@ -27,7 +27,8 @@ impl Emulator {
         })
     }
 
-    pub fn tick(&mut self, dbg: &mut DebuggerKind) {
+    pub fn tick<T>(&mut self, dbg: &mut T)
+    where T: Debugger {
         self.cpu.tick(&mut self.bus, dbg);
         self.ppu.tick(&mut self.bus, dbg);
     }

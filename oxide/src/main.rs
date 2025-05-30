@@ -3,12 +3,12 @@ pub mod debugger;
 
 use crate::emulator::*;
 use crate::debugger::{*, full_debugger::*};
+use crate::debugger::tui::ui_logger::UiLogger;
 
 use std::fmt;
 use clap::{Parser,ValueEnum};
 use debugger::tui::tui_main;
 use debugger::DummyDebugger;
-use debugger::ui_logger;
 
 #[derive(Parser)]
 #[command(version, about, name = "OxideGB")]
@@ -48,23 +48,24 @@ impl fmt::Display for DebugMode {
 fn main() {
     let cli = Cli::parse();
 
-    let mut dbg = match cli.debug {
-        DebugMode::None => DebuggerKind::Dummy(DummyDebugger::default()),
-        DebugMode::Log => {
-            env_logger::init();
-            DebuggerKind::Log(LogDebugger::default())
-        }
-        DebugMode::Full => {
-            DebuggerKind::Full(FullDebugger::default())
-        }
-    };
-
     match cli.debug {
         DebugMode::Full => {
-            ui_logger::init();
+            UiLogger::init();
             let _ = tui_main(cli.rom_path);
+            return;
         }
-        _ => {
+        DebugMode::None => {
+            let mut dbg = DummyDebugger::default();
+            let mut emu = Emulator::new("../ROMs/Tests/test.gb".to_string()).unwrap();
+            emu.tick(&mut dbg);
+            emu.tick(&mut dbg);
+            emu.tick(&mut dbg);
+            emu.tick(&mut dbg);
+            emu.tick(&mut dbg);
+            emu.tick(&mut dbg);
+        }
+        DebugMode::Log => {
+            let mut dbg = LogDebugger::default();
             let mut emu = Emulator::new("../ROMs/Tests/test.gb".to_string()).unwrap();
             emu.tick(&mut dbg);
             emu.tick(&mut dbg);

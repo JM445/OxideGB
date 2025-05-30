@@ -2,8 +2,6 @@ pub mod full_debugger;
 pub mod displays;
 pub mod tui;
 pub mod dissassembler;
-pub mod ui_utils;
-pub mod ui_logger;
 
 use full_debugger::*;
 
@@ -39,24 +37,6 @@ pub enum DebugEvent {
     Register16Change(Reg16, u16),
 }
 
-
-impl DebuggerKind {
-    pub fn on_cpu_event(&mut self, event: DebugEvent, cpu: &Cpu, bus: &Bus) {
-        match self {
-            DebuggerKind::Dummy(d) => d.on_cpu_event(event, cpu, bus),
-            DebuggerKind::Log(d)   => d.on_cpu_event(event, cpu, bus),
-            DebuggerKind::Full(d)  => d.on_cpu_event(event, cpu, bus),
-        }
-    }
-
-    pub fn on_ppu_event(&mut self, event: DebugEvent, ppu: &Ppu, bus: &Bus) {
-        match self {
-            DebuggerKind::Dummy(d) => d.on_ppu_event(event, ppu, bus),
-            DebuggerKind::Log(d)   => d.on_ppu_event(event, ppu, bus),
-            DebuggerKind::Full(d)  => d.on_ppu_event(event, ppu, bus),
-        }
-    }
-}
 
 #[derive(Debug, Default)]
 pub struct LogDebugger {}

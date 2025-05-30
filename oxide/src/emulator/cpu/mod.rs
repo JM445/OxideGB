@@ -9,8 +9,8 @@ use decoder::*;
 use displays::*;
 
 use crate::emulator::memory::Bus;
-use crate::debugger::DebuggerKind;
 use crate::debugger::DebugEvent;
+use crate::debugger::Debugger;
 
 use std::collections::VecDeque;
 
@@ -63,12 +63,13 @@ impl Cpu {
         }
     }
 
-    pub fn tick(&mut self, bus: &mut Bus, dbg: &mut DebuggerKind) {
+    pub fn tick<T>(&mut self, bus: &mut Bus, dbg: &mut T)
+        where T: Debugger
+    {
         let res = self.next_ops.pop_front();
         match res {
             Some(op) => self.execute(op, bus, dbg),
             None => self.execute(MicroOp::PrefetchOnly, bus, dbg)
         };
-        debug!("Current CPU State: {self:?}")
     }
 }

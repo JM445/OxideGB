@@ -1,5 +1,5 @@
 use std::collections::VecDeque;
-use std::sync::{Mutex};
+use std::sync::{Arc, Mutex, LazyLock};
 use log::{Level, LevelFilter, Metadata, Record, Log};
 use std::any::Any;
 
@@ -14,29 +14,7 @@ pub struct UiLogger {
     capacity: Mutex<usize>,
 }
 
-impl UiLogger {
-    pub fn new() -> Self {
-        Self {
-            entries: Mutex::new(VecDeque::with_capacity(1000)),
-            capacity: Mutex::new(1000)
-        }
-    }
-
-    pub fn set_capacity(&mut self, new_cap: usize) {
-        while self.entries.lock().unwrap().len() > new_cap {
-            let _ = self.entries.lock().unwrap().pop_front();
-        }
-        *(self.capacity.lock().unwrap()) = new_cap;
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
-}
+pub static GLOB_LOGGER : LazyLock<Arc<UiLogger>> = LazyLock::new(|| Arc::new(UiLogger::new()));
 
 impl log::Log for UiLogger {
     fn enabled(&self, metadata: &Metadata) -> bool {
@@ -65,17 +43,24 @@ impl log::Log for UiLogger {
     fn flush(&self) {}
 }
 
-pub trait LogAsAny {
-    fn as_any(&self) -> &dyn Any;
-}
-
-impl<T: Log + Any> LogAsAny for T {
-    fn as_any(&self) -> &dyn Any {
-        self
+impl UiLogger {
+    pub fn new() -> Self {
+        Self {
+            entries: Mutex::new(VecDeque::with_capacity(1000)),
+            capacity: Mutex::new(1000)
+        }
     }
-}
 
-pub fn init() {
-    log::set_boxed_logger(Box::new(UiLogger::new())).unwrap();
-    log::set_max_level(LevelFilter::Trace);
+    pub fn set_capacity(&mut self, new_cap: usize) {
+        while self.entries.lock().unwrap().len() > new_cap {
+            let _ = self.entries.lock().unwrap().pop_front();
+        }
+        *(self.capacity.lock().unwrap()) = new_cap;
+    }
+
+    pub fn init() -> Arc<UiLogger> {
+        log::set_logger(&**GLOB_LOGGER).unwrap();
+        log::set_max_level(LevelFilter::Trace);
+        Arc::clone(&GLOB_LOGGER)
+    }
 }
