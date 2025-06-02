@@ -98,6 +98,16 @@ impl Cpu {
 
     #[inline]
     pub fn decode_ld_hl_sp_e8() -> VecDeque<MicroOp> {
-
+        VecDeque::from(vec![
+            MicroOp::ReadIMM{prefetch: false},
+            MicroOp::Operation { ope: Operation::Add {
+                left: RWTarget::Reg8(Reg8::SPL), right: RWTarget::Tmp8,
+                dest: RWTarget::Reg8(Reg8::L), mask: 0b1111
+            } , prefetch: false },
+            MicroOp::Operation { ope: Operation::Adc {
+                left: RWTarget::Reg8(Reg8::SPH), right: RWTarget::Value(0),
+                dest: RWTarget::Reg8(Reg8::H), mask: 0b1111
+            }, prefetch: true },
+        ])
     }
 }

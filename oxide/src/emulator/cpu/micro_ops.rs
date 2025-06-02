@@ -5,6 +5,8 @@ use crate::emulator::memory::Bus;
 
 use super::*;
 
+use std::num::Wrapping;
+
 #[derive(Debug, Copy, Clone)]
 pub enum MicroOp {
     DataMove {source: RWTarget, dest: RWTarget, prefetch: bool},
@@ -24,6 +26,7 @@ pub enum RWTarget {
     Indirect16I(Reg16),
     Indirect16D(Reg16),
     Indirect8(Reg8),
+    Value(u16),
     Tmp8,
     Tmp16,
     IR,
@@ -31,13 +34,31 @@ pub enum RWTarget {
 }
 
 #[derive(Debug, Copy, Clone)]
+pub enum OpSize {
+    Byte,
+    Word
+}
+
+impl OpSize {
+    pub fn from(dest: RWTarget) -> Self {
+        match dest {
+            RWTarget::Reg8(_) | RWTarget::Tmp8 |
+            RWTarget::Indirect16(_) | RWTarget::Indirect16D(_) |
+            RWTarget::Indirect16I(_) | RWTarget::Addr => Self::Byte,
+            _ => Self::Word
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
 pub enum Operation {
-    Add{left: RWTarget, right: RWTarget, dest: RWTarget},
-    Sub{left: RWTarget, right: RWTarget, dest: RWTarget},
-    Inc{source: RWTarget, dest: RWTarget},
-    Dec{source: RWTarget, dest: RWTarget},
-    Adc{left: RWTarget, right: RWTarget, dest: RWTarget},
-    Sbc{left: RWTarget, right: RWTarget, dest: RWTarget},
+    Add{left: RWTarget, right: RWTarget, dest: RWTarget, mask: u8},
+    Sub{left: RWTarget, right: RWTarget, dest: RWTarget, mask: u8},
+    Inc{source: RWTarget, dest: RWTarget, mask: u8},
+    Dec{source: RWTarget, dest: RWTarget, mask: u8},
+    Adc{left: RWTarget, right: RWTarget, dest: RWTarget, mask: u8},
+    Sbc{left: RWTarget, right: RWTarget, dest: RWTarget, mask: u8},
+    Ads{left: RWTarget, right: RWTarget, dest: RWTarget, mask: u8},
 }
 
 impl Cpu {
@@ -63,7 +84,8 @@ impl Cpu {
             RWTarget::Tmp8 => self.tmp8 as u16,
             RWTarget::Tmp16 => self.tmp16,
             RWTarget::IR => self.ir as u16,
-            RWTarget::IE => self.ie as u16
+            RWTarget::IE => self.ie as u16,
+            RWTarget::Value(v) => v
         }
     }
 
@@ -90,9 +112,47 @@ impl Cpu {
             },
             RWTarget::Tmp16 => self.tmp16 = value,
             RWTarget::IR => self.ir = value as u8,
-            RWTarget::IE => self.ie = value as u8
+            RWTarget::IE => self.ie = value as u8,
+            RWTarget::Value(_) => panic!("Unauthorized micro_op !")
         };
     }
+
+    fn set_flags(&mut self, value: u8, mask: u8, ) {
+        if mask & 0b1000 != 0 {
+            self.set_flag(Flag::Z, (value & 0b1000) >> 3);
+        }
+        if mask & 0b0100 != 0 {
+            self.set_flag(Flag::N, (value & 0b0100) >> 3);
+        }
+        if mask & 0b0010 != 0 {
+            self.set_flag(Flag::H, (value & 0b0010) >> 3);
+        }
+        if mask & 0b0001 != 0 {
+            self.set_flag(Flag::C, (value & 0b0001) >> 3);
+        }
+    }
+
+    fn alu_add(left: Wrapping<u16>, right: Wrapping<u16>, carry: Wrapping<u16>) -> (u16, u8) {
+        let res = left + right + carry;
+        let xor = (left ^ right ^ carry).0;
+        (res.0,
+        (((res.0 & 0xFF) == 0) as u8) << 3 | // Z
+        0b0000 |                             // N
+        (((xor & 0x10)  != 0) as u8) << 2 |  // H
+        (((xor & 0x100) != 0) as u8) << 3)   // C
+    }
+
+    fn alu_sub(left: Wrapping<u16>, right: Wrapping<u16>, carry: Wrapping<u16>) -> (u16, u8) {
+        let res = left - right - carry;
+        let borrow = right + carry;
+
+        (res.0,
+        ((((res.0 & 0xFF) == 0) as u8) << 3) |              // Z
+        0b0100 |                                            // N
+        (((left.0 & 0xF) < (borrow.0 & 0xF)) as u8) << 2 |  // H
+        (((left.0 & 0xFF) < (borrow.0 & 0xFF)) as u8) << 3) // C
+    }
+
 
     pub(super) fn execute<T>(&mut self, op: MicroOp, bus: &mut Bus, dbg: &mut T)
     where T: Debugger
@@ -139,35 +199,58 @@ impl Cpu {
 
     fn execute_op(&mut self, op: Operation, bus: &mut Bus) {
         match op {
-            Operation::Add {left, right, dest} => {
-                let lval = self.get_target(left, bus);
-                let rval = self.get_target(right, bus);
-                self.set_target(dest, lval + rval, bus);
+            Operation::Add {left, right, dest, mask} => {
+                let lval = Wrapping(self.get_target(left, bus));
+                let rval = Wrapping(self.get_target(right, bus));
+                let (res, flags) = Self::alu_add(lval, rval, Wrapping(0));
+                self.set_target(dest, res, bus);
+                self.set_flags(flags, mask);
             },
-            Operation::Sub {left, right, dest} => {
-                let lval = self.get_target(left, bus);
-                let rval = self.get_target(right, bus);
-                self.set_target(dest, lval - rval, bus);
+            Operation::Sub {left, right, dest, mask} => {
+                let lval = Wrapping(self.get_target(left, bus));
+                let rval = Wrapping(self.get_target(right, bus));
+                let (res, flags) = Self::alu_sub(lval, rval, Wrapping(0));
+                self.set_target(dest, res, bus);
+                self.set_flags(flags, mask);
             },
-            Operation::Inc {source, dest} => {
-                let val = self.get_target(source, bus);
-                self.set_target(dest, val + 1, bus);
+            Operation::Inc {source, dest, mask} => {
+                let val = Wrapping(self.get_target(source, bus));
+                let (res, flags) = Self::alu_add(val, Wrapping(1), Wrapping(0));
+                self.set_target(dest, res, bus);
+                self.set_flags(flags, mask);
             },
-            Operation::Dec {source, dest} => {
-                let val = self.get_target(source, bus);
-                self.set_target(dest, val - 1, bus);
+            Operation::Dec {source, dest, mask} => {
+                let val = Wrapping(self.get_target(source, bus));
+                let (res, flags) = Self::alu_sub(val, Wrapping(1), Wrapping(0));
+                self.set_target(dest, res, bus);
+                self.set_flags(flags, mask);
             }
 
-            Operation::Adc {left, right, dest} => {
-                let lval = self.get_target(left, bus);
-                let rval = self.get_target(right, bus);
-                self.set_target(dest, lval + rval + self.get_flag(Flag::C) as u16, bus);
+            Operation::Adc {left, right, dest, mask} => {
+                let lval = Wrapping(self.get_target(left, bus));
+                let rval = Wrapping(self.get_target(right, bus));
+                let carry = Wrapping(self.get_flag(Flag::C) as u16);
+                let (res, flags) = Self::alu_add(lval, rval, carry);
+                self.set_target(dest, res, bus);
+                self.set_flags(flags, mask);
             }
 
-            Operation::Sbc {left, right, dest} => {
-                let lval = self.get_target(left, bus);
-                let rval = self.get_target(right, bus);
-                self.set_target(dest, lval - rval - self.get_flag(Flag::C) as u16, bus);
+            Operation::Sbc {left, right, dest, mask} => {
+                let lval = Wrapping(self.get_target(left, bus));
+                let rval = Wrapping(self.get_target(right, bus));
+                let carry = Wrapping(self.get_flag(Flag::C) as u16);
+                let (res, flags) = Self::alu_sub(lval, rval, carry);
+                self.set_target(dest, res, bus);
+                self.set_flags(flags, mask);
+            }
+
+            Operation::Ads {left, right, dest, mask} => {
+                let lval = Wrapping(self.get_target(left, bus));
+                let rval = Wrapping(self.get_target(right, bus));
+                let signed = Wrapping(rval.0 as u8 as i8 as i16 as u16);
+                let (res, flags) = Self::alu_add(lval, signed, Wrapping(0));
+                self.set_target(dest, res, bus);
+                self.set_flags(flags, mask);
             }
         }
     }
