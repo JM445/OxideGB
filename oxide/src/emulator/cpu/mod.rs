@@ -2,6 +2,7 @@ pub mod registers;
 pub mod micro_ops;
 pub mod decoder;
 pub mod displays;
+mod inline_decoder;
 
 use registers::*;
 use micro_ops::*;

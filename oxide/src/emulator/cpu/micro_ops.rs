@@ -19,8 +19,10 @@ pub enum MicroOp {
 pub enum RWTarget {
     Reg8(Reg8),
     Reg16(Reg16),
-    Addr(u16),
+    Addr,
     Indirect16(Reg16),
+    Indirect16I(Reg16),
+    Indirect16D(Reg16),
     Indirect8(Reg8),
     Tmp8,
     Tmp16,
@@ -32,18 +34,32 @@ pub enum RWTarget {
 pub enum Operation {
     Add{left: RWTarget, right: RWTarget, dest: RWTarget},
     Sub{left: RWTarget, right: RWTarget, dest: RWTarget},
-    Inc{dest: RWTarget},
-    Dec{dest: RWTarget}
+    Inc{source: RWTarget, dest: RWTarget},
+    Dec{source: RWTarget, dest: RWTarget},
+    Adc{left: RWTarget, right: RWTarget, dest: RWTarget},
+    Sbc{left: RWTarget, right: RWTarget, dest: RWTarget},
 }
 
 impl Cpu {
-    fn get_target(&self, target: RWTarget, bus: &Bus) -> u16 {
+    fn get_target(&mut self, target: RWTarget, bus: &Bus) -> u16 {
         match target {
             RWTarget::Reg8(trg) => self.read8(trg) as u16,
             RWTarget::Reg16(trg) => self.read16(trg),
-            RWTarget::Addr(trg) => bus.read(trg) as u16,
+            RWTarget::Addr => bus.read(self.tmp16) as u16,
             RWTarget::Indirect8(_) => panic!("Unimplemented Indirect read !"),
             RWTarget::Indirect16(trg) => bus.read(self.read16(trg)) as u16,
+            RWTarget::Indirect16D(trg) => {
+                let res = (bus.read(self.read16(trg)) as u16).clone();
+                let hl = self.read16(trg);
+                self.write16(trg, hl - 1);
+                res
+            }
+            RWTarget::Indirect16I(trg) => {
+                let res = (bus.read(self.read16(trg)) as u16).clone();
+                let hl = self.read16(trg);
+                self.write16(trg, hl + 1);
+                res
+            }
             RWTarget::Tmp8 => self.tmp8 as u16,
             RWTarget::Tmp16 => self.tmp16,
             RWTarget::IR => self.ir as u16,
@@ -55,10 +71,23 @@ impl Cpu {
         match target {
             RWTarget::Reg8(trg) => self.write8(trg, value as u8),
             RWTarget::Reg16(trg) => self.write16(trg, value),
-            RWTarget::Addr(trg) => bus.write(trg, value as u8),
+            RWTarget::Addr => bus.write(self.tmp16, value as u8),
             RWTarget::Indirect8(_) => panic!("Unimplemented Indirect write !"),
             RWTarget::Indirect16(trg) => bus.write(self.read16(trg), value as u8),
-            RWTarget::Tmp8 => self.tmp8 = value as u8,
+            RWTarget::Indirect16D(trg) => {
+                bus.write(self.read16(trg), value as u8);
+                let hl = self.read16(trg);
+                self.write16(trg, hl - 1);
+            }
+            RWTarget::Indirect16I(trg) => {
+                bus.write(self.read16(trg), value as u8);
+                let hl = self.read16(trg);
+                self.write16(trg, hl + 1);
+            }
+            RWTarget::Tmp8 => {
+                self.tmp8 = value as u8;
+                self.tmp16 = value as u16 & 0xFF00;
+            },
             RWTarget::Tmp16 => self.tmp16 = value,
             RWTarget::IR => self.ir = value as u8,
             RWTarget::IE => self.ie = value as u8
@@ -120,15 +149,26 @@ impl Cpu {
                 let rval = self.get_target(right, bus);
                 self.set_target(dest, lval - rval, bus);
             },
-            Operation::Inc {dest} => {
-                let val = self.get_target(dest, bus);
+            Operation::Inc {source, dest} => {
+                let val = self.get_target(source, bus);
                 self.set_target(dest, val + 1, bus);
             },
-            Operation::Dec {dest} => {
-                let val = self.get_target(dest, bus);
+            Operation::Dec {source, dest} => {
+                let val = self.get_target(source, bus);
                 self.set_target(dest, val - 1, bus);
             }
 
+            Operation::Adc {left, right, dest} => {
+                let lval = self.get_target(left, bus);
+                let rval = self.get_target(right, bus);
+                self.set_target(dest, lval + rval + self.get_flag(Flag::C) as u16, bus);
+            }
+
+            Operation::Sbc {left, right, dest} => {
+                let lval = self.get_target(left, bus);
+                let rval = self.get_target(right, bus);
+                self.set_target(dest, lval - rval - self.get_flag(Flag::C) as u16, bus);
+            }
         }
     }
 

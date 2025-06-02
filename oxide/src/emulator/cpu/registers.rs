@@ -16,7 +16,11 @@ pub enum Reg8 {
     D,
     E,
     H,
-    L
+    L,
+    PCH,
+    PCL,
+    SPH,
+    SPL
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -29,7 +33,27 @@ pub enum Reg16 {
     AF,
 }
 
+#[derive(Copy, Clone, Debug)]
+pub enum Flag {
+    Z = 7,
+    N = 6,
+    H = 5,
+    C = 4
+}
+
 impl Cpu {
+
+    #[inline]
+    pub fn get_flag(&self, f: Flag) -> u8 {
+        ((1 << (f as u8)) & self.f) >> (f as u8)
+    }
+
+    #[inline]
+    pub fn set_flag(&mut self, f: Flag, value: u8) {
+        let v = value & 0b00000001; // This may cause bugs if value is not 0 or 1
+        self.f = (self.f & !(1 << (f as u8))) | (v << (f as u8));
+    }
+
     pub fn read8(&self, r: Reg8) -> u8 {
         match r {
             Reg8::A => self.a,
@@ -39,7 +63,11 @@ impl Cpu {
             Reg8::D => self.d,
             Reg8::E => self.e,
             Reg8::H => self.h,
-            Reg8::L => self.l
+            Reg8::L => self.l,
+            Reg8::PCH => (self.pc >> 8) as u8,
+            Reg8::PCL => self.pc as u8,
+            Reg8::SPH => (self.sp >> 8) as u8,
+            Reg8::SPL => self.sp as u8,
         }
     }
 
@@ -63,7 +91,11 @@ impl Cpu {
             Reg8::D => self.d = value,
             Reg8::E => self.e = value,
             Reg8::H => self.h = value,
-            Reg8::L => self.l = value
+            Reg8::L => self.l = value,
+            Reg8::PCH => self.pc = (self.pc & 0x00FF) + (value as u16) << 8,
+            Reg8::PCL => self.pc = (value as u16) + (self.pc & 0xFF00),
+            Reg8::SPH => self.sp = (self.sp & 0x00FF) + (value as u16) << 8,
+            Reg8::SPL => self.sp = (value as u16) + (self.sp & 0xFF00),
         }
     }
 
