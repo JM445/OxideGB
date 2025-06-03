@@ -17,6 +17,8 @@ pub enum Reg8 {
     E,
     H,
     L,
+    W,
+    Z,
     PCH,
     PCL,
     SPH,
@@ -31,6 +33,34 @@ pub enum Reg16 {
     SP,
     PC,
     AF,
+    WZ
+}
+
+impl Reg16 {
+    pub fn lsb(&self) -> Reg8 {
+        match self {
+            Self::BC => Reg8::C,
+            Self::DE => Reg8::E,
+            Self::HL => Reg8::L,
+            Self::SP => Reg8::SPL,
+            Self::PC => Reg8::PCL,
+            Self::AF => Reg8::F,
+            Self::WZ => Reg8::Z,
+        }
+    }
+
+    pub fn msb(&self) -> Reg8 {
+        match self {
+            Self::BC => Reg8::B,
+            Self::DE => Reg8::D,
+            Self::HL => Reg8::H,
+            Self::SP => Reg8::SPH,
+            Self::PC => Reg8::PCH,
+            Self::AF => Reg8::A,
+            Self::WZ => Reg8::W,
+        }
+    }
+
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -68,6 +98,8 @@ impl Cpu {
             Reg8::PCL => self.pc as u8,
             Reg8::SPH => (self.sp >> 8) as u8,
             Reg8::SPL => self.sp as u8,
+            Reg8::W => (self.tmp16 >> 8) as u8,
+            Reg8::Z => self.tmp16 as u8
         }
     }
 
@@ -78,7 +110,8 @@ impl Cpu {
             Reg16::DE => ((self.d as u16) << 8) | (self.e as u16),
             Reg16::HL => ((self.h as u16) << 8) | (self.l as u16),
             Reg16::SP => self.sp,
-            Reg16::PC => self.pc
+            Reg16::PC => self.pc,
+            Reg16::WZ => self.tmp16
         }
     }
 
@@ -92,10 +125,12 @@ impl Cpu {
             Reg8::E => self.e = value,
             Reg8::H => self.h = value,
             Reg8::L => self.l = value,
-            Reg8::PCH => self.pc = (self.pc & 0x00FF) + (value as u16) << 8,
-            Reg8::PCL => self.pc = (value as u16) + (self.pc & 0xFF00),
-            Reg8::SPH => self.sp = (self.sp & 0x00FF) + (value as u16) << 8,
-            Reg8::SPL => self.sp = (value as u16) + (self.sp & 0xFF00),
+            Reg8::PCH => self.pc = (self.pc & 0x00FF) | (value as u16) << 8,
+            Reg8::PCL => self.pc = (value as u16) | (self.pc & 0xFF00),
+            Reg8::SPH => self.sp = (self.sp & 0x00FF) | (value as u16) << 8,
+            Reg8::SPL => self.sp = (value as u16) | (self.sp & 0xFF00),
+            Reg8::W   => self.tmp16 = (self.tmp16 & 0x00FF) | ((value as u16) << 8),
+            Reg8::Z   => self.tmp16 = (self.tmp16 & 0xFF00) | (value as u16)
         }
     }
 
@@ -119,6 +154,7 @@ impl Cpu {
             },
             Reg16::SP => self.sp = value,
             Reg16::PC => self.sp = value,
+            Reg16::WZ => self.tmp16 = value,
         };
     }
 }

@@ -9,7 +9,8 @@ use std::num::Wrapping;
 
 #[derive(Debug, Copy, Clone)]
 pub enum MicroOp {
-    DataMove {source: RWTarget, dest: RWTarget, prefetch: bool},
+    DataMove   {source: RWTarget, dest: RWTarget, prefetch: bool},
+    DataMoveCC {source: RWTarget, dest: RWTarget, cc: Condition},
     Operation{ope: Operation, prefetch: bool},
     ReadIMM{prefetch: bool},
     ReadLSB{prefetch: bool},
@@ -34,21 +35,29 @@ pub enum RWTarget {
 }
 
 #[derive(Debug, Copy, Clone)]
-pub enum OpSize {
-    Byte,
-    Word
+pub enum Condition {
+    Z,
+    C,
+    NZ,
+    NC
 }
 
-impl OpSize {
-    pub fn from(dest: RWTarget) -> Self {
-        match dest {
-            RWTarget::Reg8(_) | RWTarget::Tmp8 |
-            RWTarget::Indirect16(_) | RWTarget::Indirect16D(_) |
-            RWTarget::Indirect16I(_) | RWTarget::Addr => Self::Byte,
-            _ => Self::Word
-        }
-    }
-}
+// #[derive(Debug, Copy, Clone)]
+// pub enum OpSize {
+//     Byte,
+//     Word
+// }
+
+// impl OpSize {
+//     pub fn from(dest: RWTarget) -> Self {
+//         match dest {
+//             RWTarget::Reg8(_) | RWTarget::Tmp8 |
+//             RWTarget::Indirect16(_) | RWTarget::Indirect16D(_) |
+//             RWTarget::Indirect16I(_) | RWTarget::Addr => Self::Byte,
+//             _ => Self::Word
+//         }
+//     }
+// }
 
 #[derive(Debug, Copy, Clone)]
 pub enum Operation {
@@ -59,6 +68,9 @@ pub enum Operation {
     Adc{left: RWTarget, right: RWTarget, dest: RWTarget, mask: u8},
     Sbc{left: RWTarget, right: RWTarget, dest: RWTarget, mask: u8},
     Ads{left: RWTarget, right: RWTarget, dest: RWTarget, mask: u8},
+    And{left: RWTarget, right: RWTarget, dest: RWTarget, mask: u8},
+    Or {left: RWTarget, right: RWTarget, dest: RWTarget, mask: u8},
+    Xor{left: RWTarget, right: RWTarget, dest: RWTarget, mask: u8},
 }
 
 impl Cpu {
@@ -113,7 +125,7 @@ impl Cpu {
             RWTarget::Tmp16 => self.tmp16 = value,
             RWTarget::IR => self.ir = value as u8,
             RWTarget::IE => self.ie = value as u8,
-            RWTarget::Value(_) => panic!("Unauthorized micro_op !")
+            RWTarget::Value(_) => ()
         };
     }
 
@@ -153,6 +165,24 @@ impl Cpu {
         (((left.0 & 0xFF) < (borrow.0 & 0xFF)) as u8) << 3) // C
     }
 
+    fn alu_and(left: Wrapping<u16>, right: Wrapping<u16>) -> (u16, u8) {
+        let res = left & right;
+        let z   = (left.0 & 0xFF) == 0;
+        (res.0, (((z as u8) << 3) | 2))
+    }
+
+    fn alu_or(left: Wrapping<u16>, right: Wrapping<u16>) -> (u16, u8) {
+        let res = left | right;
+        let z   = (left.0 & 0xFF) == 0;
+        (res.0, ((z as u8) << 3))
+    }
+
+    fn alu_xor(left: Wrapping<u16>, right: Wrapping<u16>) -> (u16, u8) {
+        let res = left ^ right;
+        let z   = (left.0 & 0xFF) == 0;
+
+        (res.0, ((z as u8) << 3))
+    }
 
     pub(super) fn execute<T>(&mut self, op: MicroOp, bus: &mut Bus, dbg: &mut T)
     where T: Debugger
@@ -163,11 +193,16 @@ impl Cpu {
             MicroOp::ReadIMM{prefetch} |
             MicroOp::ReadLSB{prefetch} |
             MicroOp::ReadMSB{prefetch} => *prefetch,
-            MicroOp::PrefetchOnly => true
+            MicroOp::PrefetchOnly => true,
+            MicroOp::DataMoveCC { .. } => false
         };
 
         match op {
             MicroOp::DataMove{source, dest, ..} => self.execute_move(source, dest, bus, dbg),
+            MicroOp::DataMoveCC {source, dest, cc} => {
+                self.execute_move(source, dest, bus, dbg);
+                self.execute_cc(cc);
+            }
             MicroOp::Operation{ope, ..} => self.execute_op(ope, bus),
             MicroOp::ReadIMM{..} => self.execute_imm(bus),
             MicroOp::ReadLSB{..}  => self.execute_read_lsb(bus),
@@ -252,6 +287,30 @@ impl Cpu {
                 self.set_target(dest, res, bus);
                 self.set_flags(flags, mask);
             }
+
+            Operation::And {left, right, dest, mask} => {
+                let lval = Wrapping(self.get_target(left, bus));
+                let rval = Wrapping(self.get_target(right, bus));
+                let (res, flags) = Self::alu_and(lval, rval);
+                self.set_target(dest, res, bus);
+                self.set_flags(flags, mask);
+            }
+
+            Operation::Or {left, right, dest, mask} => {
+                let lval = Wrapping(self.get_target(left, bus));
+                let rval = Wrapping(self.get_target(right, bus));
+                let (res, flags) = Self::alu_or(lval, rval);
+                self.set_target(dest, res, bus);
+                self.set_flags(flags, mask);
+            }
+
+            Operation::Xor {left, right, dest, mask} => {
+                let lval = Wrapping(self.get_target(left, bus));
+                let rval = Wrapping(self.get_target(right, bus));
+                let (res, flags) = Self::alu_xor(lval, rval);
+                self.set_target(dest, res, bus);
+                self.set_flags(flags, mask);
+            }
         }
     }
 
@@ -276,5 +335,24 @@ impl Cpu {
         self.ir = bus.read(self.pc);
         self.pc += 1;
         self.next_ops.append(&mut Self::decode(self.ir));
+    }
+
+    fn execute_cc(&mut self, cc: Condition) {
+        let val = match cc {
+            Condition::Z | Condition::NZ => self.get_flag(Flag::Z),
+            Condition::C | Condition::NC => self.get_flag(Flag::C)
+        };
+
+        let check = match cc {
+            Condition::C | Condition::Z => |v| {v != 0},
+            Condition::NC | Condition::NZ => |v| {v == 0},
+        };
+
+        if check(val) {
+            self.next_ops.append(&mut self.cond_ops)
+        } else {
+            self.cond_ops.clear();
+            self.next_ops.push_back(MicroOp::PrefetchOnly)
+        }
     }
 }

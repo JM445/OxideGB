@@ -2,7 +2,10 @@ pub mod registers;
 pub mod micro_ops;
 pub mod decoder;
 pub mod displays;
-mod inline_decoder;
+
+mod inline_ld_decoder;
+mod inline_alu_decoder;
+mod inline_jump_decoder;
 
 use registers::*;
 use micro_ops::*;
@@ -38,6 +41,7 @@ pub struct Cpu {
     tmp8: u8,
     tmp16: u16,
     next_ops: VecDeque<MicroOp>,
+    cond_ops: VecDeque<MicroOp>,
 }
 
 impl Cpu {
@@ -60,7 +64,8 @@ impl Cpu {
 
             tmp8: 0,
             tmp16: 0,
-            next_ops: VecDeque::new()
+            next_ops: VecDeque::new(),
+            cond_ops: VecDeque::new()
         }
     }
 

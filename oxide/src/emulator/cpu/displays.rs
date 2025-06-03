@@ -21,13 +21,16 @@ impl fmt::Display for RWTarget {
         let s = match self {
             RWTarget::Reg8(trg) => format!("{trg}"),
             RWTarget::Reg16(trg) => format!("{trg}"),
-            RWTarget::Addr(trg) => format!("[{trg:#04X}]"),
+            RWTarget::Addr => format!("[WZ]"),
             RWTarget::Indirect16(trg) => format!("[{trg}]"),
             RWTarget::Indirect8(trg) => format!("[{trg}]"),
             RWTarget::Tmp8 => format!("TMP8"),
             RWTarget::Tmp16 => format!("TMP16"),
             RWTarget::IR => format!("IR"),
-            RWTarget::IE => format!("IE")
+            RWTarget::IE => format!("IE"),
+            RWTarget::Value(v) => format!("{:#04X}", v),
+            RWTarget::Indirect16D(trg) => format!("[{trg}-]"),
+            RWTarget::Indirect16I(trg) => format!("[{trg}+]")
         };
 
         write!(f, "{}", s)
@@ -45,6 +48,10 @@ impl fmt::Display for Reg8 {
             Reg8::E => "E",
             Reg8::H => "H",
             Reg8::L => "L",
+            Reg8::PCH => "PCh",
+            Reg8::PCL => "PCl",
+            Reg8::SPH => "SPh",
+            Reg8::SPL => "SPl"
         };
 
         write!(f, "{}", s)
@@ -69,10 +76,13 @@ impl fmt::Display for Reg16 {
 impl fmt::Display for Operation {
     fn fmt(&self, f:&mut fmt::Formatter) -> fmt::Result {
         let s = match self {
-            Operation::Add{left, right, dest} => format!("({left} + {right}) => {dest}"),
-            Operation::Sub{left, right, dest} => format!("({left} - {right}) => {dest}"),
-            Operation::Inc{dest} => format!("{dest}++"),
-            Operation::Dec{dest} => format!("{dest}--"),
+            Operation::Add{left, right, dest, ..} => format!("({left} + {right}) => {dest}"),
+            Operation::Sub{left, right, dest, ..} => format!("({left} - {right}) => {dest}"),
+            Operation::Inc{dest, ..} => format!("{dest}++"),
+            Operation::Dec{dest, ..} => format!("{dest}--"),
+            Operation::Adc{left, right, dest, ..} => format!("({left} + {right} + C) => {dest}"),
+            Operation::Sbc{left, right, dest, ..} => format!("({left} - {right} - C) => {dest}"),
+            Operation::Ads{left, right, dest, ..} => format!("({left} + Signed({right})) => {dest}"),
         };
 
         write!(f, "{}", s)
