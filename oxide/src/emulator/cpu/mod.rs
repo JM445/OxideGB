@@ -35,9 +35,8 @@ pub struct Cpu {
     pub sp: u16, // Stack Pointer
     pub pc: u16, // Program Counter
 
-    pub ir: u8,  // Instruction Register
-    pub ie: u8,  // Interrupt Enable
-
+    pub ime: bool, // Iterrupt Enable flag
+    pub ir: u8,    // Instruction Register
     tmp8: u8,
     tmp16: u16,
     next_ops: VecDeque<MicroOp>,
@@ -59,9 +58,8 @@ impl Cpu {
             sp: 0,
             pc: 0,
 
+            ime: false,
             ir: 0,
-            ie: 0,
-
             tmp8: 0,
             tmp16: 0,
             next_ops: VecDeque::new(),

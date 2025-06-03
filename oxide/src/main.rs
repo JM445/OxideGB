@@ -47,7 +47,6 @@ impl fmt::Display for DebugMode {
 
 fn main() {
     let cli = Cli::parse();
-
     match cli.debug {
         DebugMode::Full => {
             UiLogger::init();

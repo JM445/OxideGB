@@ -10,12 +10,14 @@ use std::num::Wrapping;
 #[derive(Debug, Copy, Clone)]
 pub enum MicroOp {
     DataMove   {source: RWTarget, dest: RWTarget, prefetch: bool},
-    DataMoveCC {source: RWTarget, dest: RWTarget, cc: Condition},
     Operation{ope: Operation, prefetch: bool},
     ReadIMM{prefetch: bool},
     ReadLSB{prefetch: bool},
     ReadMSB{prefetch: bool},
-    PrefetchOnly
+    ReadMSBCC {cc: Condition},
+    CheckCC {cc: Condition},
+    RetI,
+    PrefetchOnly,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -30,8 +32,7 @@ pub enum RWTarget {
     Value(u16),
     Tmp8,
     Tmp16,
-    IR,
-    IE,
+    IME,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -41,23 +42,6 @@ pub enum Condition {
     NZ,
     NC
 }
-
-// #[derive(Debug, Copy, Clone)]
-// pub enum OpSize {
-//     Byte,
-//     Word
-// }
-
-// impl OpSize {
-//     pub fn from(dest: RWTarget) -> Self {
-//         match dest {
-//             RWTarget::Reg8(_) | RWTarget::Tmp8 |
-//             RWTarget::Indirect16(_) | RWTarget::Indirect16D(_) |
-//             RWTarget::Indirect16I(_) | RWTarget::Addr => Self::Byte,
-//             _ => Self::Word
-//         }
-//     }
-// }
 
 #[derive(Debug, Copy, Clone)]
 pub enum Operation {
@@ -95,8 +79,7 @@ impl Cpu {
             }
             RWTarget::Tmp8 => self.tmp8 as u16,
             RWTarget::Tmp16 => self.tmp16,
-            RWTarget::IR => self.ir as u16,
-            RWTarget::IE => self.ie as u16,
+            RWTarget::IME => self.ime as u16,
             RWTarget::Value(v) => v
         }
     }
@@ -123,8 +106,7 @@ impl Cpu {
                 self.tmp16 = value as u16 & 0xFF00;
             },
             RWTarget::Tmp16 => self.tmp16 = value,
-            RWTarget::IR => self.ir = value as u8,
-            RWTarget::IE => self.ie = value as u8,
+            RWTarget::IME => self.ime = value > 0,
             RWTarget::Value(_) => ()
         };
     }
@@ -193,20 +175,27 @@ impl Cpu {
             MicroOp::ReadIMM{prefetch} |
             MicroOp::ReadLSB{prefetch} |
             MicroOp::ReadMSB{prefetch} => *prefetch,
+            MicroOp::ReadMSBCC { .. } => false,
+            MicroOp::CheckCC { .. } => false,
+            MicroOp::RetI { .. } => false,
             MicroOp::PrefetchOnly => true,
-            MicroOp::DataMoveCC { .. } => false
         };
 
         match op {
             MicroOp::DataMove{source, dest, ..} => self.execute_move(source, dest, bus, dbg),
-            MicroOp::DataMoveCC {source, dest, cc} => {
-                self.execute_move(source, dest, bus, dbg);
-                self.execute_cc(cc);
-            }
             MicroOp::Operation{ope, ..} => self.execute_op(ope, bus),
             MicroOp::ReadIMM{..} => self.execute_imm(bus),
             MicroOp::ReadLSB{..}  => self.execute_read_lsb(bus),
             MicroOp::ReadMSB{..}  => self.execute_read_msb(bus),
+            MicroOp::ReadMSBCC {cc} => {
+                self.execute_read_msb(bus);
+                self.execute_cc(cc);
+            },
+            MicroOp::CheckCC {cc} => self.execute_cc(cc),
+            MicroOp::RetI => {
+                self.execute_move(RWTarget::Reg16(Reg16::WZ), RWTarget::Reg16(Reg16::PC), bus, dbg);
+                self.ime = true;
+            }
             MicroOp::PrefetchOnly => (),
         };
 
