@@ -94,7 +94,12 @@ impl Cpu {
     #[inline]
     pub fn decode_jp_nn() -> VecDeque<MicroOp> {
         VecDeque::from(vec![
-
+            MicroOp::ReadLSB{prefetch: false},
+            MicroOp::ReadMSB{prefetch: false},
+            MicroOp::DataMove {
+                source: RWTarget::Reg16(Reg16::WZ), dest: RWTarget::Reg16(Reg16::PC), prefetch: false
+            },
+            MicroOp::PrefetchOnly
         ])
     }
 
