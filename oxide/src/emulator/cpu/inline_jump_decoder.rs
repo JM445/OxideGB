@@ -88,4 +88,14 @@ impl Cpu {
             MicroOp::PrefetchOnly
         ])
     }
+
+    /******************** JUMPS ********************/
+
+    #[inline]
+    pub fn decode_jp_nn() -> VecDeque<MicroOp> {
+        VecDeque::from(vec![
+
+        ])
+    }
+
 }
