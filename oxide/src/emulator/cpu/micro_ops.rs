@@ -317,6 +317,7 @@ impl Cpu {
 
     fn execute_imm(&mut self, bus: &Bus) {
         self.tmp8 = bus.read(self.pc);
+        self.tmp16 = self.tmp8 as u16;
         self.pc += 1;
     }
 

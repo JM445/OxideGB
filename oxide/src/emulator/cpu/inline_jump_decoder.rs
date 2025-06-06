@@ -103,4 +103,46 @@ impl Cpu {
         ])
     }
 
+    #[inline]
+    pub fn decode_jp_hl() -> VecDeque<MicroOp> {
+        VecDeque::from(vec![
+            MicroOp::DataMove {
+                source: RWTarget::Reg16(Reg16::HL), dest: RWTarget::Reg16(Reg16::PC), prefetch: true
+            }
+        ])
+    }
+
+    #[inline]
+    pub fn decode_jp_relative() -> VecDeque<MicroOp> {
+        VecDeque::from(vec![
+            MicroOp::ReadIMM{prefetch: false},
+            MicroOp::Operation {ope: Operation::Ads {
+                left: RWTarget::Reg16(Reg16::WZ), right: RWTarget::Tmp8,
+                dest: RWTarget::Reg16(Reg16::WZ), mask: 0b0000
+            }, prefetch: false},
+            MicroOp::DataMove{
+                source: RWTarget::Reg16(Reg16::WZ), dest: RWTarget::Reg16(Reg16::PC), prefetch: true
+            }
+        ])
+    }
+
+    #[inline]
+    pub fn decode_jp_cc_nn(cc: Condition) -> VecDeque<MicroOp> {
+        VecDeque::from(vec![
+            MicroOp::ReadLSB { prefetch: false },
+            MicroOp::ReadMSBCC { cc },
+        ])
+    }
+
+    #[inline]
+    pub fn append_jp_cc_nn() -> VecDeque<MicroOp> {
+        VecDeque::from(vec![
+            MicroOp::DataMove{
+                source: RWTarget::Reg16(Reg16::WZ), dest: RWTarget::Reg16(Reg16::PC), prefetch: false,
+            },
+            MicroOp::PrefetchOnly
+        ])
+    }
+
+
 }
