@@ -16,6 +16,7 @@ pub enum MicroOp {
     ReadMSB{prefetch: bool},
     ReadMSBCC {cc: Condition},
     CheckCC {cc: Condition},
+    Cpl, Daa, Ccf, Scf, Prefix,
     RetI,
     PrefetchOnly,
 }
@@ -45,6 +46,7 @@ pub enum Condition {
 
 #[derive(Debug, Copy, Clone)]
 pub enum Operation {
+    // Arithmetic
     Add{left: RWTarget, right: RWTarget, dest: RWTarget, mask: u8},
     Sub{left: RWTarget, right: RWTarget, dest: RWTarget, mask: u8},
     Inc{source: RWTarget, dest: RWTarget, mask: u8},
@@ -52,9 +54,28 @@ pub enum Operation {
     Adc{left: RWTarget, right: RWTarget, dest: RWTarget, mask: u8},
     Sbc{left: RWTarget, right: RWTarget, dest: RWTarget, mask: u8},
     Ads{left: RWTarget, right: RWTarget, dest: RWTarget, mask: u8},
+
+    // Logic
     And{left: RWTarget, right: RWTarget, dest: RWTarget, mask: u8},
     Or {left: RWTarget, right: RWTarget, dest: RWTarget, mask: u8},
     Xor{left: RWTarget, right: RWTarget, dest: RWTarget, mask: u8},
+
+    // Bitshifts
+    Rsh {shift: ShiftType, source: RWTarget, dest: RWTarget, mask: u8},
+    Lsh {shift: ShiftType, source: RWTarget, dest: RWTarget, mask: u8},
+
+    // Binops
+    Swp {source: RWTarget, dest: RWTarget, mask: u8},
+    Bit {source: RWTarget, bit: u8, mask: u8},
+    Rsb {source: RWTarget, dest: RWTarget, bit: u8, value: u8},
+}
+
+#[derive(Debug, Copy, Clone)]
+pub enum ShiftType {
+    R,
+    RC,
+    SA,
+    SL
 }
 
 impl Cpu {
@@ -166,6 +187,47 @@ impl Cpu {
         (res.0, ((z as u8) << 3))
     }
 
+    fn alu_rsh(shift: ShiftType, val: Wrapping<u8>, old_c: u8) -> (u16, u8) {
+        let (res, c) = match shift {
+            ShiftType::R => ((val >> 1).0 | (old_c << 7), (val.0 & 0x01)),
+            ShiftType::RC => ((val >> 1).0 | (val << 7).0, val.0 & 0x01),
+            ShiftType::SL => ((val >> 1).0, val.0 & 0x01),
+            ShiftType::SA => ((val >> 1).0 | (val.0 & 0x80), val.0 & 0x01)
+        };
+
+        (res as u16, (((res == 0) as u8) << 3) | (c & 0x01))
+    }
+
+    fn alu_lsh(shift: ShiftType, val: Wrapping<u8>, old_c: u8) -> (u16, u8) {
+        let (res, c) = match shift {
+            ShiftType::R => ((val << 1).0 | (old_c & 0x01), (val.0 & 0x80) >> 7),
+            ShiftType::RC => ((val << 1).0 | ((val.0 & 0x80) >> 7), (val.0 & 0x80) >> 7),
+            ShiftType::SL => ((val << 1).0, (val.0 & 0x80) >> 7),
+            ShiftType::SA => {
+                error!("Error: Invalid Shift Left Arithmetic");
+                (val.0, 0)
+            }
+        };
+
+        (res as u16, (((res == 0) as u8) << 3) | (c & 0x01))
+    }
+
+    fn alu_swap(val: Wrapping<u8>) -> (u16, u8) {
+        let res = ((val.0 & 0xF0) >> 4) | ((val.0 & 0x0F) << 4);
+        (res as u16, ((res == 0) as u8) << 3)
+    }
+
+    fn alu_bit(val: Wrapping<u8>, bit: u8) -> (u16, u8) {
+        let res = ((val.0 & (1 << bit)) != 0) as u8;
+        (res as u16, (res << 3) | 0x02)
+    }
+
+    fn alu_rsb(val: Wrapping<u8>, bit: u8, set: u8) -> (u16, u8) {
+        let mask = !(1 << bit);
+        let res = (val.0 & mask) | (set << bit);
+        (res as u16, 0)
+    }
+
     pub(super) fn execute<T>(&mut self, op: MicroOp, bus: &mut Bus, dbg: &mut T)
     where T: Debugger
     {
@@ -178,7 +240,8 @@ impl Cpu {
             MicroOp::ReadMSBCC { .. } => false,
             MicroOp::CheckCC { .. } => false,
             MicroOp::RetI { .. } => false,
-            MicroOp::PrefetchOnly => true,
+            MicroOp::PrefetchOnly | MicroOp::Cpl | MicroOp::Daa |
+            MicroOp::Ccf | MicroOp::Scf | MicroOp::Prefix => true,
         };
 
         match op {
@@ -195,6 +258,42 @@ impl Cpu {
             MicroOp::RetI => {
                 self.execute_move(RWTarget::Reg16(Reg16::WZ), RWTarget::Reg16(Reg16::PC), bus, dbg);
                 self.ime = true;
+            },
+            MicroOp::Cpl => {
+                self.a = !self.a;
+                self.set_flags(0b0110, 0b0110);
+            },
+            MicroOp::Ccf => {
+                let val = (self.get_flag(Flag::C) == 0) as u8;
+                self.set_flag(Flag::C, val);
+            },
+            MicroOp::Scf => {
+                self.set_flag(Flag::C, 1);
+            },
+            MicroOp::Daa => {
+                let h = self.get_flag(Flag::H);
+                let c = self.get_flag(Flag::C);
+                let n = self.get_flag(Flag::N);
+                let mut offset = 0;
+                let res;
+
+                if (n == 0 && self.a & 0xF > 0x9) || h == 1 {
+                    offset |= 0x06;
+                }
+
+                if (n == 0 && self.a > 0x99) || c == 1 {
+                    offset |= 0x60;
+                }
+
+                if n == 0 {
+                    res = self.a.wrapping_add(offset);
+                } else {
+                    res = self.a.wrapping_sub(offset);
+                }
+                self.a = res;
+            },
+            MicroOp::Prefix => {
+                self.prefix = true
             }
             MicroOp::PrefetchOnly => (),
         };
@@ -223,6 +322,9 @@ impl Cpu {
 
     fn execute_op(&mut self, op: Operation, bus: &mut Bus) {
         match op {
+
+            /****** Arithmetic ******/
+
             Operation::Add {left, right, dest, mask} => {
                 let lval = Wrapping(self.get_target(left, bus));
                 let rval = Wrapping(self.get_target(right, bus));
@@ -277,6 +379,8 @@ impl Cpu {
                 self.set_flags(flags, mask);
             }
 
+            /****** Logic ******/
+
             Operation::And {left, right, dest, mask} => {
                 let lval = Wrapping(self.get_target(left, bus));
                 let rval = Wrapping(self.get_target(right, bus));
@@ -299,6 +403,43 @@ impl Cpu {
                 let (res, flags) = Self::alu_xor(lval, rval);
                 self.set_target(dest, res, bus);
                 self.set_flags(flags, mask);
+            }
+
+            /****** Shifts ******/
+
+            Operation::Rsh {shift, source, dest, mask} => {
+                let val = Wrapping(self.get_target(source, bus) as u8);
+                let (res, flags) = Self::alu_rsh(shift, val, self.get_flag(Flag::C));
+                self.set_target(dest, res, bus);
+                self.set_flags(flags, mask);
+            }
+
+            Operation::Lsh {shift, source, dest, mask} => {
+                let val = Wrapping(self.get_target(source, bus) as u8);
+                let (res, flags) = Self::alu_lsh(shift, val, self.get_flag(Flag::C));
+                self.set_target(dest, res, bus);
+                self.set_flags(flags, mask);
+            },
+
+            Operation::Swp { source, dest, mask } => {
+                let val = Wrapping(self.get_target(source, bus) as u8);
+                let (res, flags) = Self::alu_swap(val);
+                self.set_target(dest, res, bus);
+                self.set_flags(flags, mask);
+            },
+
+            /****** Bits ******/
+
+            Operation::Bit { source,  bit, mask } => {
+                let val = Wrapping(self.get_target(source, bus) as u8);
+                let (_, flags) = Self::alu_bit(val, bit);
+                self.set_flags(flags, mask);
+            },
+
+            Operation::Rsb { source, dest, bit, value } => {
+                let val = Wrapping(self.get_target(source, bus) as u8);
+                let (res, _) = Self::alu_rsb(val, bit, value);
+                self.set_target(dest, res, bus);
             }
         }
     }
@@ -324,7 +465,12 @@ impl Cpu {
     fn execute_prefetch(&mut self, bus: &Bus) {
         self.ir = bus.read(self.pc);
         self.pc += 1;
-        self.next_ops.append(&mut Self::decode(self.ir));
+        if !self.prefix  {
+            self.next_ops.append(&mut Self::decode(self.ir));
+        } else {
+            self.next_ops.append(&mut Self::decode_prefix());
+            self.prefix = false;
+        }
     }
 
     fn execute_cc(&mut self, cc: Condition) {

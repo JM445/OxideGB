@@ -6,6 +6,8 @@ pub mod displays;
 mod inline_ld_decoder;
 mod inline_alu_decoder;
 mod inline_jump_decoder;
+mod inline_misc_decoder;
+mod inline_binop_decoder;
 
 use registers::*;
 use micro_ops::*;
@@ -37,6 +39,8 @@ pub struct Cpu {
 
     pub ime: bool, // Iterrupt Enable flag
     pub ir: u8,    // Instruction Register
+
+    prefix: bool,  // Was the last decoded instruction the 0xCB prefix ?
     tmp8: u8,
     tmp16: u16,
     next_ops: VecDeque<MicroOp>,
@@ -60,6 +64,7 @@ impl Cpu {
 
             ime: false,
             ir: 0,
+            prefix: false,
             tmp8: 0,
             tmp16: 0,
             next_ops: VecDeque::new(),

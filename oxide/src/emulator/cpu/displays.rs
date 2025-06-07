@@ -9,7 +9,23 @@ impl fmt::Display for MicroOp {
             MicroOp::ReadIMM{prefetch} => format!("ReadImm({prefetch})"),
             MicroOp::ReadLSB{prefetch} => format!("ReadLSB({prefetch})"),
             MicroOp::ReadMSB{prefetch} => format!("ReadMSB({prefetch})"),
-            MicroOp::PrefetchOnly => format!("PrefetchOnly")
+            MicroOp::ReadMSBCC { cc } => format!("ReadMSBCC({cc})"),
+            MicroOp::CheckCC { cc } => format!("CheckCC({cc})"),
+            MicroOp::RetI => format!("RETI"),
+            MicroOp::PrefetchOnly => format!("PrefetchOnly"),
+        };
+
+        write!(f, "{}", s)
+    }
+}
+
+impl fmt::Display for Condition {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let s = match self {
+            Condition::Z => format!("Z == 1"),
+            Condition::C => format!("C == 1"),
+            Condition::NZ => format!("Z == 0"),
+            Condition::NC => format!("N == 0"),
         };
 
         write!(f, "{}", s)
@@ -26,11 +42,10 @@ impl fmt::Display for RWTarget {
             RWTarget::Indirect8(trg) => format!("[{trg}]"),
             RWTarget::Tmp8 => format!("TMP8"),
             RWTarget::Tmp16 => format!("TMP16"),
-            RWTarget::IR => format!("IR"),
-            RWTarget::IE => format!("IE"),
             RWTarget::Value(v) => format!("{:#04X}", v),
             RWTarget::Indirect16D(trg) => format!("[{trg}-]"),
-            RWTarget::Indirect16I(trg) => format!("[{trg}+]")
+            RWTarget::Indirect16I(trg) => format!("[{trg}+]"),
+            RWTarget::IME => format!("IME"),
         };
 
         write!(f, "{}", s)
@@ -48,6 +63,8 @@ impl fmt::Display for Reg8 {
             Reg8::E => "E",
             Reg8::H => "H",
             Reg8::L => "L",
+            Reg8::W => "W",
+            Reg8::Z => "Z",
             Reg8::PCH => "PCh",
             Reg8::PCL => "PCl",
             Reg8::SPH => "SPh",
@@ -67,6 +84,7 @@ impl fmt::Display for Reg16 {
             Reg16::HL => "HL",
             Reg16::SP => "SP",
             Reg16::PC => "PC",
+            Reg16::WZ => "WZ",
         };
 
         write!(f, "{}", s)
@@ -83,6 +101,9 @@ impl fmt::Display for Operation {
             Operation::Adc{left, right, dest, ..} => format!("({left} + {right} + C) => {dest}"),
             Operation::Sbc{left, right, dest, ..} => format!("({left} - {right} - C) => {dest}"),
             Operation::Ads{left, right, dest, ..} => format!("({left} + Signed({right})) => {dest}"),
+            Operation::And{left, right, dest, ..} => format!("({left} & {right}) => {dest}"),
+            Operation::Or {left, right, dest, ..} => format!("({left} | {right}) => {dest}"),
+            Operation::Xor{left, right, dest, ..} => format!("({left} ^ {right}) => {dest}"),
         };
 
         write!(f, "{}", s)

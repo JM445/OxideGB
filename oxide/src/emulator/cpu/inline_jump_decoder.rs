@@ -113,20 +113,6 @@ impl Cpu {
     }
 
     #[inline]
-    pub fn decode_jp_relative() -> VecDeque<MicroOp> {
-        VecDeque::from(vec![
-            MicroOp::ReadIMM{prefetch: false},
-            MicroOp::Operation {ope: Operation::Ads {
-                left: RWTarget::Reg16(Reg16::WZ), right: RWTarget::Tmp8,
-                dest: RWTarget::Reg16(Reg16::WZ), mask: 0b0000
-            }, prefetch: false},
-            MicroOp::DataMove{
-                source: RWTarget::Reg16(Reg16::WZ), dest: RWTarget::Reg16(Reg16::PC), prefetch: true
-            }
-        ])
-    }
-
-    #[inline]
     pub fn decode_jp_cc_nn(cc: Condition) -> VecDeque<MicroOp> {
         VecDeque::from(vec![
             MicroOp::ReadLSB { prefetch: false },
@@ -144,5 +130,54 @@ impl Cpu {
         ])
     }
 
+    #[inline]
+    pub fn decode_jr() -> VecDeque<MicroOp> {
+        VecDeque::from(vec![
+            MicroOp::ReadIMM{prefetch: false},
+            MicroOp::Operation {ope: Operation::Ads {
+                left: RWTarget::Reg16(Reg16::WZ), right: RWTarget::Tmp8,
+                dest: RWTarget::Reg16(Reg16::WZ), mask: 0b0000
+            }, prefetch: false},
+            MicroOp::DataMove{
+                source: RWTarget::Reg16(Reg16::WZ), dest: RWTarget::Reg16(Reg16::PC), prefetch: true
+            }
+        ])
+    }
 
+    #[inline]
+    pub fn decode_jr_cc(cc: Condition) -> VecDeque<MicroOp> {
+        VecDeque::from(vec![
+            MicroOp::ReadMSBCC {cc}
+        ])
+    }
+
+    #[inline]
+    pub fn append_jr_cc() -> VecDeque<MicroOp> {
+        VecDeque::from(vec![
+            MicroOp::Operation {ope: Operation::Ads {
+                left: RWTarget::Reg16(Reg16::PC), right: RWTarget::Reg8(Reg8::W), dest: RWTarget::Reg16(Reg16::PC), mask: 0b0000
+            }, prefetch: false},
+            MicroOp::PrefetchOnly
+        ])
+    }
+
+    /******************** JUMPS ********************/
+
+    #[inline]
+    pub fn decode_rst(addr: u8) -> VecDeque<MicroOp> {
+        VecDeque::from(vec![
+            MicroOp::Operation{ope: Operation::Dec {
+                source: RWTarget::Reg16(Reg16::SP), dest: RWTarget::Reg16(Reg16::SP), mask: 0b0000
+            }, prefetch: false},
+            MicroOp::DataMove {
+                source: RWTarget::Reg8(Reg8::PCH), dest: RWTarget::Indirect16D(Reg16::SP), prefetch: false
+            },
+            MicroOp::DataMove {
+                source: RWTarget::Reg8(Reg8::PCL), dest: RWTarget::Indirect16(Reg16::SP), prefetch: false
+            },
+            MicroOp::DataMove {
+                source: RWTarget::Value(addr as u16), dest: RWTarget::Reg16(Reg16::PC), prefetch: true
+            }
+        ])
+    }
 }
