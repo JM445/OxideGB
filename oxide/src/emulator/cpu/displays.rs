@@ -11,8 +11,13 @@ impl fmt::Display for MicroOp {
             MicroOp::ReadMSB{prefetch} => format!("ReadMSB({prefetch})"),
             MicroOp::ReadMSBCC { cc } => format!("ReadMSBCC({cc})"),
             MicroOp::CheckCC { cc } => format!("CheckCC({cc})"),
-            MicroOp::RetI => format!("RETI"),
-            MicroOp::PrefetchOnly => format!("PrefetchOnly"),
+            MicroOp::RetI => "RETI".to_string(),
+            MicroOp::Ccf => "CCF".to_string(),
+            MicroOp::Cpl => "CPL".to_string(),
+            MicroOp::Daa => "DAA".to_string(),
+            MicroOp::Scf => "SCF".to_string(),
+            MicroOp::Prefix => "PREFIX".to_string(),
+            MicroOp::PrefetchOnly => "PrefetchOnly".to_string(),
         };
 
         write!(f, "{}", s)
@@ -22,10 +27,10 @@ impl fmt::Display for MicroOp {
 impl fmt::Display for Condition {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let s = match self {
-            Condition::Z => format!("Z == 1"),
-            Condition::C => format!("C == 1"),
-            Condition::NZ => format!("Z == 0"),
-            Condition::NC => format!("N == 0"),
+            Condition::Z => "Z == 1".to_string(),
+            Condition::C => "C == 1".to_string(),
+            Condition::NZ => "Z == 0".to_string(),
+            Condition::NC => "N == 0".to_string(),
         };
 
         write!(f, "{}", s)
@@ -37,15 +42,15 @@ impl fmt::Display for RWTarget {
         let s = match self {
             RWTarget::Reg8(trg) => format!("{trg}"),
             RWTarget::Reg16(trg) => format!("{trg}"),
-            RWTarget::Addr => format!("[WZ]"),
+            RWTarget::Addr => "[WZ]".to_string(),
             RWTarget::Indirect16(trg) => format!("[{trg}]"),
             RWTarget::Indirect8(trg) => format!("[{trg}]"),
-            RWTarget::Tmp8 => format!("TMP8"),
-            RWTarget::Tmp16 => format!("TMP16"),
+            RWTarget::Tmp8 => "TMP8".to_string(),
+            RWTarget::Tmp16 => "TMP16".to_string(),
             RWTarget::Value(v) => format!("{:#04X}", v),
             RWTarget::Indirect16D(trg) => format!("[{trg}-]"),
             RWTarget::Indirect16I(trg) => format!("[{trg}+]"),
-            RWTarget::IME => format!("IME"),
+            RWTarget::IME => "IME".to_string(),
         };
 
         write!(f, "{}", s)
@@ -91,6 +96,19 @@ impl fmt::Display for Reg16 {
     }
 }
 
+impl fmt::Display for ShiftType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let s = match self {
+            ShiftType::R => "R",
+            ShiftType::RC => "RC",
+            ShiftType::SA => "SA",
+            ShiftType::SL => "SL",
+        };
+        
+        write!(f, "{}", s)
+    }
+}
+
 impl fmt::Display for Operation {
     fn fmt(&self, f:&mut fmt::Formatter) -> fmt::Result {
         let s = match self {
@@ -104,6 +122,11 @@ impl fmt::Display for Operation {
             Operation::And{left, right, dest, ..} => format!("({left} & {right}) => {dest}"),
             Operation::Or {left, right, dest, ..} => format!("({left} | {right}) => {dest}"),
             Operation::Xor{left, right, dest, ..} => format!("({left} ^ {right}) => {dest}"),
+            Operation::Lsh{shift, source, dest, ..} => format!("L[{shift}] {source} => {dest}"),
+            Operation::Rsh{shift, source, dest, ..} => format!("R[{shift}] {source} => {dest}"),
+            Operation::Swp {source, dest, ..} => format!("Swap({source}) => {dest}"),
+            Operation::Bit {source,  bit, ..} => format!("Bit[{bit}]({source})"),
+            Operation::Rsb {source, dest, bit, value} => format!("Bit[{bit}]({source}) = {value} => {dest}")
         };
 
         write!(f, "{}", s)

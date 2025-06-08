@@ -153,7 +153,7 @@ impl Cpu {
                 self.l = value as u8;
             },
             Reg16::SP => self.sp = value,
-            Reg16::PC => self.sp = value,
+            Reg16::PC => self.pc = value,
             Reg16::WZ => self.tmp16 = value,
         };
     }

@@ -25,7 +25,7 @@ impl<'a> Ui<'a> {
                 "break" | "b" => {self.parse_breakpoint(&words[1..]);},
                 _ => {
                     self.last_cmd = None;
-                    self.cmd_area.insert_str(format!("Error: Unknown command: {}", line));
+                    self.cmd_area.insert_str(format!("Error: Unknown command: {}\n> ", line));
                 }
             }
         } else if let Some(ref last) = self.last_cmd.clone() {

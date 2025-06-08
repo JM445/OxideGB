@@ -74,4 +74,12 @@ impl Cpu {
             MicroOp::Prefix
         ])
     }
+    
+    #[inline]
+    pub fn decode_invalid(opcode: u8) -> VecDeque<MicroOp> {
+        error!("Error: Decoded an invalid opcode. Using NOOP instead.");
+        VecDeque::from(vec![
+            MicroOp::PrefetchOnly
+        ])
+    }
 }

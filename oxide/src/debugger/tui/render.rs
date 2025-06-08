@@ -16,7 +16,7 @@ use std::sync::{Arc};
 use log::debug;
 
 impl<'a> Ui<'a> {
-    pub(super) fn draw(&self, frame: &mut Frame) {
+    pub(super) fn draw(&mut self, frame: &mut Frame) {
         let area = frame.area();
 
         let top_down = Layout::default()
@@ -87,10 +87,15 @@ impl<'a> Ui<'a> {
         )
     }
 
-    fn draw_dissassembly(&self, size: u16) -> Paragraph {
+    fn draw_dissassembly(&mut self, size: u16) -> Paragraph {
         let mut lines = Vec::new();
-        let mut cur_pc = self.top_pc;
         let mem = &self.emulator.bus;
+
+        while self.emulator.cpu.pc > self.top_pc + 10 {
+            self.top_pc += 1
+        }
+
+        let mut cur_pc = self.top_pc;
 
         for _ in 0..size {
             let bytes = mem.get_instruction(cur_pc);

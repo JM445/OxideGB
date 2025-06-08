@@ -55,23 +55,19 @@ fn main() {
         }
         DebugMode::None => {
             let mut dbg = DummyDebugger::default();
-            let mut emu = Emulator::new("../ROMs/Tests/test.gb".to_string()).unwrap();
-            emu.tick(&mut dbg);
-            emu.tick(&mut dbg);
-            emu.tick(&mut dbg);
-            emu.tick(&mut dbg);
-            emu.tick(&mut dbg);
-            emu.tick(&mut dbg);
+            let mut emu = Emulator::new(cli.rom_path).unwrap();
+            loop {
+                emu.tick(&mut dbg);
+            }
         }
         DebugMode::Log => {
+            println!("Starting emulator in log mode");
+            env_logger::init();
             let mut dbg = LogDebugger::default();
-            let mut emu = Emulator::new("../ROMs/Tests/test.gb".to_string()).unwrap();
-            emu.tick(&mut dbg);
-            emu.tick(&mut dbg);
-            emu.tick(&mut dbg);
-            emu.tick(&mut dbg);
-            emu.tick(&mut dbg);
-            emu.tick(&mut dbg);
+            let mut emu = Emulator::new(cli.rom_path.to_string()).unwrap();
+            loop {
+                emu.tick(&mut dbg);
+            }
         }
     }
 }
