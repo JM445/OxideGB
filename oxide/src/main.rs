@@ -13,7 +13,7 @@ use debugger::DummyDebugger;
 #[derive(Parser)]
 #[command(version, about, name = "OxideGB")]
 struct Cli {
-    /// Wich debugger to use.
+    /// Which debugger to use.
     #[arg(short, long, default_value_t = DebugMode::None)]
     debug: DebugMode,
 

@@ -72,10 +72,10 @@ impl Bus {
         let mut res : [u8; 4] = [0, 0, 0, 0];
 
         res[0] = self.read(addr);
-        res[1] = self.read(addr + 1);
-        res[2] = self.read(addr + 2);
-        res[3] = self.read(addr + 3);
-        return res;
+        res[1] = self.read(addr.wrapping_add(1));
+        res[2] = self.read(addr.wrapping_add(2));
+        res[3] = self.read(addr.wrapping_add(3));
+        res
     }
 
     #[allow(unused_variables, dead_code)]

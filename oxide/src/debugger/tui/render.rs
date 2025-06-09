@@ -1,5 +1,6 @@
 use super::Ui;
 use super::dissassembler::*;
+use super::dissassembler::opcodes::*;
 use super::ui_utils::*;
 use super::ui_logger::*;
 use crate::emulator::cpu::registers::*;
