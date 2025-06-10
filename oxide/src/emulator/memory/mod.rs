@@ -11,9 +11,9 @@ use log::{debug, info, warn};
 use std::path::Path;
 
 pub struct Bus {
-    cartridge: Cartridge,
-    ram: Ram,
-    ioregs: Vec<u8>,
+    pub cartridge: Cartridge,
+    pub ram: Ram,
+    pub ioregs: Vec<u8>,
 }
 
 pub struct BusIter<'a> {
@@ -99,6 +99,21 @@ impl Bus {
         BusIter {
             bus: &self,
             iter_ptr: 0x0000
+        }
+    }
+
+    pub fn get_rom_bank(&self) -> usize {
+        self.cartridge.cur_rom
+    }
+
+    pub fn get_ram_bank(&self) -> usize {
+        self.cartridge.cur_ram
+    }
+
+    pub fn is_ram(addr: u16) -> bool {
+        match addr {
+            0x8000..=0xFE9F | 0xFF80..=0xFFFE => true,
+            _ => false
         }
     }
 }

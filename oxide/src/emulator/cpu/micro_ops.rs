@@ -301,7 +301,7 @@ impl Cpu {
         if prefetch {
             let old_opcode = self.ir;
             self.execute_prefetch(bus);
-            dbg.on_cpu_event(DebugEvent::IrPrefetch(self.ir), self, bus);
+            dbg.on_cpu_event(DebugEvent::IrPrefetch(self.ir, self.pc - 1), self, bus);
             dbg.on_cpu_event(DebugEvent::InstructionEnd(old_opcode), self, bus);
         }
         dbg.on_cpu_event(DebugEvent::MicroOpEnd(op), self, bus);

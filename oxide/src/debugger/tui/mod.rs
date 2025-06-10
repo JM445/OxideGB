@@ -23,6 +23,7 @@ use ratatui::{
 };
 
 use tui_textarea::{TextArea, Input};
+use crate::debugger::dissassembler::CodeMap;
 
 pub struct Ui<'a> {
     exit: bool,
@@ -31,7 +32,8 @@ pub struct Ui<'a> {
     cmd_area: TextArea<'a>,
     debugger: FullDebugger,
     last_cmd: Option<String>,
-    top_pc: u16
+    top_pc: u16,
+    code_map: CodeMap
 }
 
 impl<'a> Ui<'a> {
@@ -51,7 +53,8 @@ impl<'a> Ui<'a> {
             cmd_area: textarea,
             debugger: dbg,
             last_cmd: None,
-            top_pc: 0
+            top_pc: 0,
+            code_map: CodeMap::new()
         }
     }
 

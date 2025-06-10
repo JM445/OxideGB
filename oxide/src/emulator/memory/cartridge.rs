@@ -8,13 +8,13 @@ use std::fs;
 
 #[derive(Debug)]
 pub struct Cartridge {
-    rom_banks: Vec<[u8; 0x4000]>, // Rom Banks
-    ram_banks: Vec<[u8; 0x2000]>, // Ram Banks
-    mbc: MbcKind,
+    pub rom_banks: Vec<[u8; 0x4000]>, // Rom Banks
+    pub ram_banks: Vec<[u8; 0x2000]>, // Ram Banks
+    pub mbc: MbcKind,
 
-    cur_rom: usize, // Current Rom Bank index
-    cur_ram: usize, // Current Ram Bank index
-    ram_enabled: bool,
+    pub cur_rom: usize, // Current Rom Bank index
+    pub cur_ram: usize, // Current Ram Bank index
+    pub ram_enabled: bool,
 }
 
 impl Cartridge {

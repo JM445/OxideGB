@@ -32,7 +32,7 @@ pub enum DebuggerKind {
 pub enum DebugEvent {
     MicroOpEnd(MicroOp),
     InstructionEnd(u8),
-    IrPrefetch(u8),
+    IrPrefetch(u8, u16),
     Register8Change(Reg8, u8),
     Register16Change(Reg16, u16),
 }

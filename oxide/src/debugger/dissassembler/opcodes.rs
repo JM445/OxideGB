@@ -818,13 +818,15 @@ impl InstructionMeta {
             _ => false
         }
     }
+    
+    pub fn is_dead_end(&self) -> bool {
+        (self.is_call && !self.is_cond) || (self.is_ret && !self.is_cond) ||
+            (self.is_jump && !self.is_cond && self.is_dynamic)
+    }
 }
 
 impl CodeBlock {
     pub fn is_dynamic(addr: u16) -> bool {
-        match addr {
-            0x8000..=0xFE9F | 0xFF80..=0xFFFE => true,
-            _ => false
-        }
+        Bus::is_ram(addr)
     }
 }

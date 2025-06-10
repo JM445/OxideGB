@@ -11,6 +11,7 @@ use log::{debug, info, warn};
 #[derive(Debug, Default)]
 pub struct FullDebugger {
     breakpoints: Vec<Breakpoint>,
+    cur_instr: u16,
 }
 
 #[derive(Debug, Clone)]
@@ -33,7 +34,8 @@ impl Debugger for FullDebugger {
                         _ => {}
                     }
                 }
-            }
+            },
+            DebugEvent::IrPrefetch(_, addr) => self.cur_instr = addr,
             _ => {}
         }
     }
@@ -46,7 +48,8 @@ impl Debugger for FullDebugger {
 impl FullDebugger {
     pub fn new() -> Self {
         FullDebugger {
-            breakpoints: Vec::new()
+            breakpoints: Vec::new(),
+            cur_instr: 0,
         }
     }
 
