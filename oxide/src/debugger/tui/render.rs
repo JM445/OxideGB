@@ -10,7 +10,7 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph, Padding, Table, Row, Cell, Wrap},
     text::{Line, Span},
     Frame,
-    style::Stylize,
+    style::{Color, Modifier, Style, Stylize},
 };
 use std::sync::{Arc};
 
@@ -42,7 +42,7 @@ impl<'a> Ui<'a> {
                 Constraint::Percentage(100)
             ]).split(top_down[0]);
 
-        frame.render_widget(self.draw_dissassembly(top_split[0].height), top_split[0]);
+        frame.render_widget(self.draw_dissassembly(top_split[0].height, top_split[0].width), top_split[0]);
         frame.render_widget(self.draw_memory(top_split[1].height), top_split[1]);
         frame.render_widget(self.draw_logger(), top_split[2]);
         frame.render_widget(&self.cmd_area, down_split[0]);
@@ -88,39 +88,96 @@ impl<'a> Ui<'a> {
         )
     }
 
-    fn draw_dissassembly(&mut self, size: u16) -> Paragraph {
+    fn draw_dissassembly(&mut self, height: u16, width: u16) -> Paragraph {
         let mut lines = Vec::new();
         let mem = &self.emulator.bus;
+        let block = self.code_map.get_block(self.emulator.cpu.pc, &self.emulator.bus);
 
-        while self.emulator.cpu.pc > self.top_pc + 10 {
-            self.top_pc += 1
-        }
+        // Map the previously executed instructions to a list of lines
+        let padded_prev = if self.debugger.last_instructions.len() < 5 {
+            (0..5).map(|i| self.debugger.last_instructions.get(i).unwrap_or(&(0, [0, 0, 0, 0])))
+                .map(|e| Self::get_disassemble_line(&e.1, e.0, false, true)).collect::<Vec<Line>>()
+        } else {
+            self.debugger.last_instructions.iter()
+                .map(|e| Self::get_disassemble_line(&e.1, e.0, false, true)).collect::<Vec<Line>>()
+        };
+        
+        lines.extend(padded_prev);
 
-        let mut cur_pc = self.top_pc;
+        // Add a separator
+        lines.push(std::iter::repeat('-').take(width as usize - 2).collect::<String>().into());
 
-        for _ in 0..size {
-            let bytes = mem.get_instruction(cur_pc);
-            let len = get_instruction_length(bytes[0]);
-            lines.push(Line::from(vec![
-                format!("{:#06X} | ", cur_pc).blue().bold().into(),
-                if cur_pc >= self.emulator.cpu.pc - 1 &&
-                    cur_pc < self.emulator.cpu.pc + get_instruction_length(self.emulator.bus.read(self.emulator.cpu.pc)) - 1
-                {
-                    format!("{:<width$}", disassemble(&bytes), width=20).reversed().into()
-                } else {
-                    format!("{:<width$}", disassemble(&bytes), width=20).into()
-                },
-                "| ".into(),
-                bytes.iter().take(len as usize).map(|x| format!("{:#04X}", x)).collect::<Vec<_>>().join(" ").into(),
-            ]));
-            cur_pc += len;
-        }
+        let index = block.instructions.iter()
+            .take_while(
+                |i| !(self.emulator.cpu.pc >= i.addr && self.emulator.cpu.pc < i.addr + i.size as u16)
+            ).count();
+        // Map the right amount of elements of the current block to a list of lines
+        lines.extend(
+                block.instructions.iter().skip(index).take(height as usize - 6).map(
+                    |i| {
+                        let current = self.emulator.cpu.pc >= i.addr && self.emulator.cpu.pc < i.addr + i.size as u16;
+                        Self::get_disassemble_line(&i.full_bytes, i.addr, current, false)
+                    } 
+                )
+            );
+
         Paragraph::new(lines).block(Block::default()
-                                    .title(Line::from("Disassembly").left_aligned())
-                                    .borders(Borders::ALL)
-                                    .padding(Padding::uniform(1)))
-                             .alignment(Alignment::Left)
+            .title(Line::from("Disassembly").left_aligned())
+            .borders(Borders::ALL)
+            .padding(Padding::uniform(1)))
+            .alignment(Alignment::Left)
     }
+
+    fn get_disassemble_line(instr: &[u8; 4], addr: u16,  current: bool, previous: bool) -> Line {
+        let style = match (current, previous) {
+            (_, true) => Style::new().bg(Color::Gray).fg(Color::DarkGray),
+            (true, _) => Style::new().reversed(),
+            (false, false) => Style::new()
+        };
+
+        let x = vec![
+            format!("{:#06X} | ", addr).blue().bold().into(),
+            Span::styled(format!("{:<width$}", disassemble(instr), width = 20), style),
+            "| ".into(),
+            instr.iter().take(get_instruction_length(instr[0]) as usize)
+                .map(|x| format!("{:#04X}", x)).collect::<Vec<_>>().join(" ").into(),
+        ];
+
+        Line::from(x)
+    }
+    // fn draw_dissassembly_old(&mut self, size: u16) -> Paragraph {
+    //     let mut lines = Vec::new();
+    //     let mem = &self.emulator.bus;
+    // 
+    //     while self.emulator.cpu.pc > self.top_pc + 10 {
+    //         self.top_pc += 1
+    //     }
+    // 
+    //     let mut cur_pc = self.top_pc;
+    // 
+    //     for _ in 0..size {
+    //         let bytes = mem.get_instruction(cur_pc);
+    //         let len = get_instruction_length(bytes[0]);
+    //         lines.push(Line::from(vec![
+    //             format!("{:#06X} | ", cur_pc).blue().bold().into(),
+    //             if cur_pc >= self.emulator.cpu.pc - 1 &&
+    //                 cur_pc < self.emulator.cpu.pc + get_instruction_length(self.emulator.bus.read(self.emulator.cpu.pc)) - 1
+    //             {
+    //                 format!("{:<width$}", disassemble(&bytes), width=20).reversed().into()
+    //             } else {
+    //                 format!("{:<width$}", disassemble(&bytes), width=20).into()
+    //             },
+    //             "| ".into(),
+    //             bytes.iter().take(len as usize).map(|x| format!("{:#04X}", x)).collect::<Vec<_>>().join(" ").into(),
+    //         ]));
+    //         cur_pc += len;
+    //     }
+    //     Paragraph::new(lines).block(Block::default()
+    //                                 .title(Line::from("Disassembly").left_aligned())
+    //                                 .borders(Borders::ALL)
+    //                                 .padding(Padding::uniform(1)))
+    //                          .alignment(Alignment::Left)
+    // }
 
     fn draw_registers(&self) -> Paragraph {
         let cpu = &self.emulator.cpu;

@@ -11,6 +11,7 @@ use render::*;
 use parser::*;
 
 use std::{fmt, io};
+use std::collections::VecDeque;
 use std::time::Duration;
 use std::path::Path;
 //use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
@@ -33,7 +34,8 @@ pub struct Ui<'a> {
     debugger: FullDebugger,
     last_cmd: Option<String>,
     top_pc: u16,
-    code_map: CodeMap
+    code_map: CodeMap,
+    last_instructions: VecDeque<&'a[u16; 4]>
 }
 
 impl<'a> Ui<'a> {
@@ -54,7 +56,8 @@ impl<'a> Ui<'a> {
             debugger: dbg,
             last_cmd: None,
             top_pc: 0,
-            code_map: CodeMap::new()
+            code_map: CodeMap::new(),
+            last_instructions: VecDeque::new()
         }
     }
 

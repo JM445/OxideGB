@@ -1,3 +1,4 @@
+use std::collections::VecDeque;
 use crate::emulator::memory::*;
 use crate::emulator::cpu::*;
 use crate::emulator::ppu::*;
@@ -10,8 +11,9 @@ use log::{debug, info, warn};
 
 #[derive(Debug, Default)]
 pub struct FullDebugger {
-    breakpoints: Vec<Breakpoint>,
-    cur_instr: u16,
+    pub breakpoints: Vec<Breakpoint>,
+    pub cur_instr: u16,
+    pub last_instructions: VecDeque<(u16, [u8; 4])>
 }
 
 #[derive(Debug, Clone)]
@@ -24,10 +26,14 @@ pub enum Breakpoint {
 }
 
 impl Debugger for FullDebugger {
-    fn on_cpu_event(&mut self, event: DebugEvent, _cpu: &Cpu, _bus: &Bus) {
+    fn on_cpu_event(&mut self, event: DebugEvent, _cpu: &Cpu, bus: &Bus) {
         debug!("FullDebugger: CPU Event received: {event:?}");
         match event {
             DebugEvent::InstructionEnd(_) => {
+                if self.last_instructions.len() >= 5 {
+                    self.last_instructions.pop_front();
+                }
+                self.last_instructions.push_back((self.cur_instr, bus.get_instruction(self.cur_instr)));
                 for bp in &mut self.breakpoints {
                     match bp {
                         Breakpoint::Instructions(n) => *n -= 1,
@@ -50,6 +56,7 @@ impl FullDebugger {
         FullDebugger {
             breakpoints: Vec::new(),
             cur_instr: 0,
+            last_instructions: VecDeque::new()
         }
     }
 

@@ -106,6 +106,7 @@ impl CodeBlock {
             if cur.is_dead_end() {
                 break;
             }
+            addr += cur.size as u16;
         }
 
         // Remove from linked list all addresses that are in the current block
