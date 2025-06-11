@@ -67,9 +67,9 @@ impl<'a> Ui<'a> {
 
         while !self.exit {
             term.draw(|frame| self.draw(frame))?;
-            if event::poll(Duration::from_secs(0)).unwrap() {
-                self.handle_events()?;
-            }
+//            if event::poll(Duration::from_secs(0)).unwrap() {
+            self.handle_events()?;
+//            }
         }
 
         ratatui::restore();
@@ -112,7 +112,7 @@ impl<'a> Ui<'a> {
 
 pub fn tui_main<P: AsRef<Path>>(rom_path: P) -> Result<(), String> {
     let mut ui = Ui::new(Emulator::new(rom_path)?, FullDebugger::new());
-    ui.emulator.tick(&mut ui.debugger);
+//    ui.emulator.tick(&mut ui.debugger);
     if let Ok(_) = ui.run() {
         Ok(())
     } else {

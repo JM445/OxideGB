@@ -6,7 +6,7 @@ pub struct Ram {
     wram: [u8; 0x1000],
     wram_banks: Vec<[u8; 0x1000]>,
     hram: [u8; 0x80],
-    oam: [u8; 0x10],
+    oam: [u8; 0xA0],
     cur_wram: usize,
     cur_vram: usize
 }
@@ -18,7 +18,7 @@ impl Ram {
             wram: [0; 0x1000],
             wram_banks: vec![[0; 0x1000]; 1],
             hram: [0; 0x80],
-            oam: [0; 0x10],
+            oam: [0; 0xA0],
             cur_wram: 0,
             cur_vram: 0,
         }

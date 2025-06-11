@@ -462,7 +462,7 @@ impl Cpu {
         self.pc += 1;
     }
 
-    fn execute_prefetch(&mut self, bus: &Bus) {
+    pub (super) fn execute_prefetch(&mut self, bus: &Bus) {
         self.ir = bus.read(self.pc);
         self.pc += 1;
         if !self.prefix  {

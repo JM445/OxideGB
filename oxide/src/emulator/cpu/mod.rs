@@ -78,7 +78,7 @@ impl Cpu {
         let res = self.next_ops.pop_front();
         match res {
             Some(op) => self.execute(op, bus, dbg),
-            None => self.execute(MicroOp::PrefetchOnly, bus, dbg)
+            None => self.execute_prefetch(bus)
         };
     }
 }

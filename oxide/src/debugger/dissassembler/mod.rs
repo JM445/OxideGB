@@ -3,7 +3,7 @@ pub mod opcodes;
 use std::collections::{HashMap, HashSet};
 use log::debug;
 use opcodes::*;
-use crate::emulator::memory::Bus;
+use crate::emulator::memory::{Bus, MemBlock};
 
 
 /*
@@ -18,6 +18,7 @@ pub struct InstructionMeta {
     pub size: usize,
     pub next: u16,
     pub target: Option<u16>,
+    pub mem_block: MemBlock,
 
     pub is_cond: bool,
     pub is_call: bool,
@@ -32,6 +33,7 @@ pub struct CodeBlock {
     pub dynamic: bool,
     pub invalid: bool,
     pub size: usize,
+    pub mem_block: MemBlock,
     visited: HashSet<u16>,
     linked: HashSet<u16>,
 }
@@ -52,6 +54,7 @@ impl InstructionMeta {
             size:  size as usize,
             next: addr + size,
             target: Self::get_target(addr, bus),
+            mem_block: MemBlock::from_addr(addr),
 
             is_cond: Self::is_conditional(opcode),
             is_call: Self::is_call(opcode),
@@ -76,6 +79,7 @@ impl CodeBlock {
             size: 0,
             visited: HashSet::new(),
             linked: HashSet::new(),
+            mem_block: MemBlock::from_addr(addr),
         };
 
         res.init(bus);
@@ -103,7 +107,7 @@ impl CodeBlock {
             }
 
             // If it's a dead end, block is analyzed
-            if cur.is_dead_end() {
+            if cur.is_dead_end() || cur.mem_block != MemBlock::from_addr(cur.next) {
                 break;
             }
             addr += cur.size as u16;

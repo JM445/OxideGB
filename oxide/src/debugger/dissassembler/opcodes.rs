@@ -766,13 +766,6 @@ pub fn get_instruction_length(opcode: u8) -> u16 {
 
 impl InstructionMeta {
     pub fn get_target(addr: u16, bus: &Bus) -> Option<u16> {
-        let rel = bus.read(addr + 1) as i8;
-        let rel_dest = if rel < 0 {
-            addr - (((rel as i16) * -1) as u16)
-        } else {
-            addr + 3 + (rel as u16)
-        };
-
         match bus.read(addr) {
             0xC2 | 0xC3 | 0xC4 | 0xCA | 0xCC | 0xCD |
             0xD2 | 0xD4 | 0xDA | 0xDC => Some(bus.read(addr + 1) as u16 | ((bus.read(addr + 2) as u16) << 8)),
@@ -780,7 +773,15 @@ impl InstructionMeta {
             0xD7 => Some(0x0010), 0xDF => Some(0x0018),
             0xE7 => Some(0x0020), 0xEF => Some(0x0028),
             0xF7 => Some(0x0030), 0xFF => Some(0x0038),
-            0x20 | 0x30 | 0x18 | 0x28 | 0x38 => Some(rel_dest),
+            0x20 | 0x30 | 0x18 | 0x28 | 0x38 => {
+                let rel = bus.read(addr + 1) as i8;
+                let rel_dest = if rel < 0 {
+                    addr - (((rel as i16) * -1) as u16)
+                } else {
+                    addr + 3 + (rel as u16)
+                };
+                Some(rel_dest)
+            },
             _ => None
         }
     }
@@ -820,8 +821,8 @@ impl InstructionMeta {
     }
     
     pub fn is_dead_end(&self) -> bool {
-        (self.is_call && !self.is_cond) || (self.is_ret && !self.is_cond) ||
-            (self.is_jump && !self.is_cond && self.is_dynamic)
+        ((self.is_call && !self.is_cond) || (self.is_ret && !self.is_cond) ||
+            (self.is_jump && !self.is_cond && self.is_dynamic)) && Bus::is_same_block(self.addr, self.next)
     }
 }
 

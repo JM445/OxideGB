@@ -16,6 +16,42 @@ pub struct Bus {
     pub ioregs: Vec<u8>,
 }
 
+#[derive(Debug, Copy, Clone, PartialOrd, PartialEq)]
+pub enum MemBlock {
+    ROM0 = 0,
+    ROMX = 1,
+    VRAM = 2,
+    ERAM = 3,
+    WRAM1 = 4,
+    WRAM2 = 5,
+    ECHO = 6,
+    OAM = 7,
+    NC = 8,
+    IOREG = 9,
+    HRAM = 10,
+    IE = 11,
+}
+
+impl MemBlock {
+    pub fn from_addr(addr: u16) -> Self {
+        use super::MemBlock::*;
+        match addr {
+            0x0000..0x4000 => ROM0,
+            0x4000..0x8000 => ROMX,
+            0x8000..0xA000 => VRAM,
+            0xA000..0xC000 => ERAM,
+            0xC000..0xD000 => WRAM1,
+            0xD000..0xE000 => WRAM2,
+            0xE000..0xFE00 => ECHO,
+            0xFE00..0xFEA0 => OAM,
+            0xFEA0..0xFF00 => NC,
+            0xFF00..0xFF80 => IOREG,
+            0xFF80..0xFFFF => HRAM,
+            0xFFFF => IE
+        }
+    }
+}
+
 pub struct BusIter<'a> {
     bus: &'a Bus,
     iter_ptr: u16
@@ -115,5 +151,24 @@ impl Bus {
             0x8000..=0xFE9F | 0xFF80..=0xFFFE => true,
             _ => false
         }
+    }
+
+    pub fn is_same_block(addr1: u16, addr2: u16) -> bool {
+        let blocks : [u16; 12] = [
+            0x0000, 0x4000, 0x8000, 0xA000, 0xC000, 0xD000, 0xE000, 0xFE00, 0xFEA0, 0xFF00, 0xFF80, 0xFFFF
+        ];
+        let mut block1 = -1;
+        let mut block2 = -1;
+        for i in 0..11 {
+            if addr1 >= blocks[i] && addr1 < blocks[i + 1] {
+                block1 = i as i32;
+            }
+
+            if addr2 >= blocks[i] && addr2 < blocks[i + 1] {
+                block2 = i as i32;
+            }
+        }
+
+        block1 == block2
     }
 }

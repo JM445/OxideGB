@@ -8,7 +8,7 @@ use crate::emulator::cpu::registers::*;
 use ratatui::{
     layout::{Constraint, Direction, Layout, Alignment},
     widgets::{Block, Borders, Paragraph, Padding, Table, Row, Cell, Wrap},
-    text::{Line, Span},
+    text::{Line, Span, Text},
     Frame,
     style::{Color, Modifier, Style, Stylize},
 };
@@ -42,23 +42,29 @@ impl<'a> Ui<'a> {
                 Constraint::Percentage(100)
             ]).split(top_down[0]);
 
-        frame.render_widget(self.draw_dissassembly(top_split[0].height, top_split[0].width), top_split[0]);
+        frame.render_widget(self.draw_disassembly(top_split[0].height, top_split[0].width), top_split[0]);
         frame.render_widget(self.draw_memory(top_split[1].height), top_split[1]);
-        frame.render_widget(self.draw_logger(), top_split[2]);
+        frame.render_widget(self.draw_logger(top_split[2].width, top_split[2].height), top_split[2]);
         frame.render_widget(&self.cmd_area, down_split[0]);
         frame.render_widget(self.draw_registers(), down_split[1]);
     }
 
-    fn draw_logger(&self) -> Paragraph {
+    fn draw_logger(&self, width: u16, height: u16) -> Paragraph {
         let logger = Arc::clone(&GLOB_LOGGER);
 
         let lines = (*logger).entries.lock().unwrap().iter().map(|e| format_log(e.clone())).collect::<Vec<Line>>();
+
+        let total_height : u16 = lines.iter().map(|l| {
+            ((l.width() as u16 + width -1) / width).max(1)
+        }).sum();
+        let scroll = total_height.saturating_sub(height);
 
         Paragraph::new(lines).block(Block::default()
                                     .title(Line::from("Log").right_aligned())
                                     .borders(Borders::ALL))
                              .wrap(Wrap {trim: false})
                              .alignment(Alignment::Left)
+                            .scroll((scroll, 0))
     }
 
     fn draw_memory(&self, size: u16) -> Table {
@@ -88,20 +94,20 @@ impl<'a> Ui<'a> {
         )
     }
 
-    fn draw_dissassembly(&mut self, height: u16, width: u16) -> Paragraph {
+    fn draw_disassembly(&mut self, height: u16, width: u16) -> Paragraph {
         let mut lines = Vec::new();
         let mem = &self.emulator.bus;
         let block = self.code_map.get_block(self.emulator.cpu.pc, &self.emulator.bus);
 
         // Map the previously executed instructions to a list of lines
-        let padded_prev = if self.debugger.last_instructions.len() < 5 {
-            (0..5).map(|i| self.debugger.last_instructions.get(i).unwrap_or(&(0, [0, 0, 0, 0])))
-                .map(|e| Self::get_disassemble_line(&e.1, e.0, false, true)).collect::<Vec<Line>>()
-        } else {
-            self.debugger.last_instructions.iter()
-                .map(|e| Self::get_disassemble_line(&e.1, e.0, false, true)).collect::<Vec<Line>>()
-        };
-        
+        let mut padded_prev = self.debugger.last_instructions.iter()
+                .map(|e| Self::get_disassemble_line(&e.1, e.0, false, true))
+            .collect::<Vec<Line>>();
+
+        while padded_prev.len() < 5 {
+            padded_prev.insert(0, Self::get_disassemble_line(&[0, 0, 0, 0], 0, false, true));
+        }
+
         lines.extend(padded_prev);
 
         // Add a separator
@@ -109,13 +115,17 @@ impl<'a> Ui<'a> {
 
         let index = block.instructions.iter()
             .take_while(
-                |i| !(self.emulator.cpu.pc >= i.addr && self.emulator.cpu.pc < i.addr + i.size as u16)
+                |i| {
+                    let mut fixed_pc = self.emulator.cpu.pc.wrapping_sub(1);
+                    fixed_pc = if self.emulator.cpu.pc == 0 {0} else {fixed_pc};
+                    !(fixed_pc >= i.addr && fixed_pc < i.addr + i.size as u16)
+                }
             ).count();
         // Map the right amount of elements of the current block to a list of lines
         lines.extend(
                 block.instructions.iter().skip(index).take(height as usize - 6).map(
                     |i| {
-                        let current = self.emulator.cpu.pc >= i.addr && self.emulator.cpu.pc < i.addr + i.size as u16;
+                        let current = self.emulator.cpu.pc.wrapping_sub(1) >= i.addr && self.emulator.cpu.pc.wrapping_sub(1) < i.addr + i.size as u16;
                         Self::get_disassemble_line(&i.full_bytes, i.addr, current, false)
                     } 
                 )

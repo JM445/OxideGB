@@ -60,9 +60,15 @@ impl Cartridge {
     pub fn read(&self, addr: u16) -> u8 {
         match (addr, self.mbc) {
             (0x0000..=0x3FFF, _) => self.rom_banks[0][addr as usize],
-            (0x4000..=0x7FFF, MbcKind::NO_MBC(_)) => self.rom_banks[1][addr as usize],
+            (0x4000..=0x7FFF, MbcKind::NO_MBC(_)) => {
+                if self.rom_banks.len() > 1 {
+                    self.rom_banks[1][addr as usize]
+                } else {
+                    0
+                }
+            },
             (0xA000..=0xBFFF, MbcKind::NO_MBC(value)) if value == 0x08 || value == 0x09 => self.ram_banks[0][(addr - 0xA000) as usize],
-            _ => panic!("Unexpected memory access: Address = {:#04X}, MBC = {}", addr, self.mbc)
+            _ => 0,
         }
     }
 
