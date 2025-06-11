@@ -57,7 +57,7 @@ impl<'a> Ui<'a> {
         let total_height : u16 = lines.iter().map(|l| {
             ((l.width() as u16 + width -1) / width).max(1)
         }).sum();
-        let scroll = total_height.saturating_sub(height);
+        let scroll = total_height.saturating_sub(height - 2);
 
         Paragraph::new(lines).block(Block::default()
                                     .title(Line::from("Log").right_aligned())
@@ -140,7 +140,7 @@ impl<'a> Ui<'a> {
 
     fn get_disassemble_line(instr: &[u8; 4], addr: u16,  current: bool, previous: bool) -> Line {
         let style = match (current, previous) {
-            (_, true) => Style::new().bg(Color::Gray).fg(Color::DarkGray),
+            (_, true) => Style::new().fg(Color::Black).bg(Color::Rgb(74, 74, 74)),
             (true, _) => Style::new().reversed(),
             (false, false) => Style::new()
         };

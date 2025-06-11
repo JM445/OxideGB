@@ -13,7 +13,8 @@ use log::{debug, info, warn};
 pub struct FullDebugger {
     pub breakpoints: Vec<Breakpoint>,
     pub cur_instr: u16,
-    pub last_instructions: VecDeque<(u16, [u8; 4])>
+    pub last_instructions: VecDeque<(u16, [u8; 4])>,
+    pub debug_stop: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -56,7 +57,8 @@ impl FullDebugger {
         FullDebugger {
             breakpoints: Vec::new(),
             cur_instr: 0,
-            last_instructions: VecDeque::new()
+            last_instructions: VecDeque::new(),
+            debug_stop: false,
         }
     }
 
@@ -67,7 +69,8 @@ impl FullDebugger {
 
     pub fn should_stop(&mut self, cpu: &Cpu, bus: &Bus) -> bool {
         let mut triggered = false;
-
+        
+        // Iterate through breakpoints and check their conditions
         for b in &self.breakpoints {
             let res = match b {
                 Breakpoint::Ticks(n) | Breakpoint::Instructions(n) => if n <= &0 {true} else {false},
@@ -88,7 +91,13 @@ impl FullDebugger {
                 _ => true
             }
         });
-        triggered
+
+        // Stop on LD B, B if in debug mode
+        if self.debug_stop && bus.read(self.cur_instr) == 0x40 {
+            true
+        } else {
+            triggered
+        }
     }
 
     pub fn tick(&mut self) {

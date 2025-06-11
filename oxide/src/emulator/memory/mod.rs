@@ -2,6 +2,7 @@ pub mod cartridge;
 pub mod mbc_type;
 pub mod ram;
 
+use std::fs;
 use cartridge::*;
 use ram::*;
 
@@ -14,29 +15,33 @@ pub struct Bus {
     pub cartridge: Cartridge,
     pub ram: Ram,
     pub ioregs: Vec<u8>,
+    pub boot_rom: [u8; 256],
+    pub boot_enabled: bool,
 }
 
 #[derive(Debug, Copy, Clone, PartialOrd, PartialEq)]
 pub enum MemBlock {
-    ROM0 = 0,
-    ROMX = 1,
-    VRAM = 2,
-    ERAM = 3,
-    WRAM1 = 4,
-    WRAM2 = 5,
-    ECHO = 6,
-    OAM = 7,
-    NC = 8,
-    IOREG = 9,
-    HRAM = 10,
-    IE = 11,
+    BOOT = 0,
+    ROM0 = 1,
+    ROMX = 2,
+    VRAM = 3,
+    ERAM = 4,
+    WRAM1 = 5,
+    WRAM2 = 6,
+    ECHO = 7,
+    OAM = 8,
+    NC = 9,
+    IOREG = 10,
+    HRAM = 11,
+    IE = 12,
 }
 
 impl MemBlock {
     pub fn from_addr(addr: u16) -> Self {
         use super::MemBlock::*;
         match addr {
-            0x0000..0x4000 => ROM0,
+            0x0000..0x0100 => BOOT,
+            0x0100..0x4000 => ROM0,
             0x4000..0x8000 => ROMX,
             0x8000..0xA000 => VRAM,
             0xA000..0xC000 => ERAM,
@@ -67,11 +72,32 @@ impl<'a> Iterator for BusIter<'a> {
 }
 
 impl Bus {
-    pub fn new<P: AsRef<Path>>(rom_path: P) -> Result<Self, String> {
+    pub fn new<P: AsRef<Path>>(rom_path: P, boot_path: P) -> Result<Self, String> {
+        let raw = fs::read(boot_path);
+        let boot_rom : [u8; 256];
+        let boot_enabled : bool;
+        
+        if let Ok(res) = raw {
+            if res.len() != 256 {
+                warn!("Invalid boot ROM length. Defaulting to no boot ROM mode.");
+                boot_rom = [0; 256];
+                boot_enabled = false;
+            } else {
+                boot_rom = <Vec<u8> as TryInto<[u8; 256]>>::try_into(res).unwrap();
+                boot_enabled = true;
+            }
+        } else {
+            info!("Invalid boot ROM path. Defaulting to no boot ROM mode.");
+            boot_rom = [0; 256];
+            boot_enabled = false;
+        }
+        
         Ok(Bus {
             cartridge: Cartridge::from_file(rom_path)?,
             ram: Ram::new(),
             ioregs: vec![0, 0x80],
+            boot_rom,
+            boot_enabled
         })
     }
 
@@ -80,7 +106,14 @@ impl Bus {
         debug!("Memory read: 0x{:#06X}", addr);
 
         match addr {
-            0x0000..=0x7FFF | 0xA000..=0xBFFF => self.cartridge.read(addr),
+            0x0000..0x100 => {
+                if !self.boot_enabled {
+                    self.cartridge.read(addr)
+                } else {
+                    self.boot_rom[addr as usize]
+                }
+            }
+            0x0100..=0x7FFF | 0xA000..=0xBFFF => self.cartridge.read(addr),
             0x8000..=0x9FFF | 0xC000..=0xEFFF | 0xF000..=0xFE9F | 0xFF80..=0xFFFE => self.ram.read(addr),
             0xFEA0..=0xFEFF => {
                 warn!("Memory read to prohibited zone: {:#06X}", addr);
@@ -116,12 +149,19 @@ impl Bus {
 
     #[allow(unused_variables, dead_code)]
     fn read_regs(&self, addr: u16) -> u8 {
-        0x00
+        match addr {
+            // Temporary value to run Mooneye
+            0xFF44 | 0xFF02 => 0xFF,
+            _ => 0x00
+        }
     }
 
     #[allow(unused_variables, dead_code)]
     fn write_regs(&mut self, addr: u16, value: u8) {
-        ()
+        match addr {
+            0xFF50 => self.boot_enabled = false,
+            _ => ()
+        }
     }
 
     pub fn iter_at(&self, addr: u16) -> BusIter<'_> {

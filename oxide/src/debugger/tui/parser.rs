@@ -22,11 +22,16 @@ impl<'a> Ui<'a> {
                            self.tick();
                     }
                 },
+                "debug" => {
+                    self.debugger.debug_stop = !self.debugger.debug_stop;
+                    info!("Debug Break Mode: {}", if self.debugger.debug_stop {"Enabled"} else {"Disabled"});
+                },
                 "break" | "b" => {self.parse_breakpoint(&words[1..]);},
+                "continue" | "c" => self.tick(),
                 _ => {
                     self.last_cmd = None;
                     self.cmd_area.insert_str(format!("Error: Unknown command: {}\n> ", line));
-                }
+                },
             }
         } else if let Some(ref last) = self.last_cmd.clone() {
             self.parse_line(last);

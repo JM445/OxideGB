@@ -17,8 +17,12 @@ struct Cli {
     #[arg(short, long, default_value_t = DebugMode::None)]
     debug: DebugMode,
 
+    /// Boot rom binary file
+    #[arg(short, long, default_value_t = String::new())]
+    boot: String,
+
     /// Path of the GB ROM to load
-    rom_path: String
+    rom_path: String,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
@@ -50,12 +54,12 @@ fn main() {
     match cli.debug {
         DebugMode::Full => {
             UiLogger::init();
-            let _ = tui_main(cli.rom_path);
+            let _ = tui_main(cli.rom_path, cli.boot);
             return;
         }
         DebugMode::None => {
             let mut dbg = DummyDebugger::default();
-            let mut emu = Emulator::new(cli.rom_path).unwrap();
+            let mut emu = Emulator::new(cli.rom_path, cli.boot).unwrap();
             loop {
                 emu.tick(&mut dbg);
             }
@@ -64,7 +68,7 @@ fn main() {
             println!("Starting emulator in log mode");
             env_logger::init();
             let mut dbg = LogDebugger::default();
-            let mut emu = Emulator::new(cli.rom_path.to_string()).unwrap();
+            let mut emu = Emulator::new(cli.rom_path, cli.boot).unwrap();
             loop {
                 emu.tick(&mut dbg);
             }

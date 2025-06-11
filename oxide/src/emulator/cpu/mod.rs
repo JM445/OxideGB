@@ -48,7 +48,7 @@ pub struct Cpu {
 }
 
 impl Cpu {
-    pub fn new() -> Cpu {
+    pub fn new(initial_pc: u16) -> Cpu {
         Cpu {
             a: 0,
             f: 0,
@@ -60,7 +60,7 @@ impl Cpu {
             l: 0,
 
             sp: 0,
-            pc: 0,
+            pc: initial_pc,
 
             ime: false,
             ir: 0,

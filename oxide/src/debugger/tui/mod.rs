@@ -110,8 +110,8 @@ impl<'a> Ui<'a> {
     }
 }
 
-pub fn tui_main<P: AsRef<Path>>(rom_path: P) -> Result<(), String> {
-    let mut ui = Ui::new(Emulator::new(rom_path)?, FullDebugger::new());
+pub fn tui_main<P: AsRef<Path>>(rom_path: P, boot_path: P) -> Result<(), String> {
+    let mut ui = Ui::new(Emulator::new(rom_path, boot_path)?, FullDebugger::new());
 //    ui.emulator.tick(&mut ui.debugger);
     if let Ok(_) = ui.run() {
         Ok(())

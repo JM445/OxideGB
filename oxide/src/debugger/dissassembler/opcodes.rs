@@ -828,6 +828,6 @@ impl InstructionMeta {
 
 impl CodeBlock {
     pub fn is_dynamic(addr: u16) -> bool {
-        Bus::is_ram(addr)
+        Bus::is_ram(addr) || addr < 0x0100
     }
 }
