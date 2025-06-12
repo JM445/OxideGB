@@ -25,14 +25,11 @@ pub enum MicroOp {
 pub enum RWTarget {
     Reg8(Reg8),
     Reg16(Reg16),
-    Addr,
     Indirect16(Reg16),
     Indirect16I(Reg16),
     Indirect16D(Reg16),
-    Indirect8(Reg8),
+    HRAM(Reg8),
     Value(u16),
-    Tmp8,
-    Tmp16,
     IME,
 }
 
@@ -72,10 +69,10 @@ pub enum Operation {
 
 #[derive(Debug, Copy, Clone)]
 pub enum ShiftType {
-    R,
-    RC,
-    SA,
-    SL
+    R,  // RR / RL
+    RC, // RRC / RLC
+    SA, // SRA / SLA
+    SL  // SRL
 }
 
 impl Cpu {
@@ -83,8 +80,6 @@ impl Cpu {
         match target {
             RWTarget::Reg8(trg) => self.read8(trg) as u16,
             RWTarget::Reg16(trg) => self.read16(trg),
-            RWTarget::Addr => bus.read(self.tmp16) as u16,
-            RWTarget::Indirect8(_) => panic!("Unimplemented Indirect read !"),
             RWTarget::Indirect16(trg) => bus.read(self.read16(trg)) as u16,
             RWTarget::Indirect16D(trg) => {
                 let res = (bus.read(self.read16(trg)) as u16).clone();
@@ -97,9 +92,8 @@ impl Cpu {
                 let hl = self.read16(trg);
                 self.write16(trg, hl + 1);
                 res
-            }
-            RWTarget::Tmp8 => self.tmp8 as u16,
-            RWTarget::Tmp16 => self.tmp16,
+            },
+            RWTarget::HRAM(trg) => bus.read(0xFF00 + self.read8(trg) as u16) as u16,
             RWTarget::IME => self.ime as u16,
             RWTarget::Value(v) => v
         }
@@ -109,8 +103,6 @@ impl Cpu {
         match target {
             RWTarget::Reg8(trg) => self.write8(trg, value as u8),
             RWTarget::Reg16(trg) => self.write16(trg, value),
-            RWTarget::Addr => bus.write(self.tmp16, value as u8),
-            RWTarget::Indirect8(_) => panic!("Unimplemented Indirect write !"),
             RWTarget::Indirect16(trg) => bus.write(self.read16(trg), value as u8),
             RWTarget::Indirect16D(trg) => {
                 bus.write(self.read16(trg), value as u8);
@@ -121,12 +113,8 @@ impl Cpu {
                 bus.write(self.read16(trg), value as u8);
                 let hl = self.read16(trg);
                 self.write16(trg, hl + 1);
-            }
-            RWTarget::Tmp8 => {
-                self.tmp8 = value as u8;
-                self.tmp16 = value as u16 & 0xFF00;
             },
-            RWTarget::Tmp16 => self.tmp16 = value,
+            RWTarget::HRAM(trg) => bus.write(0xFF00 + self.read8(trg) as u16, value as u8),
             RWTarget::IME => self.ime = value > 0,
             RWTarget::Value(_) => ()
         };
@@ -452,18 +440,17 @@ impl Cpu {
     fn execute_read_lsb(&mut self, bus: &mut Bus) {
         let value = bus.read(self.pc);
         self.pc += 1;
-        self.tmp16 = (value as u16) | (self.tmp16 & 0xFF00);
+        self.write8(Reg8::Z, value);
     }
 
     fn execute_read_msb(&mut self, bus: &mut Bus) {
         let value = bus.read(self.pc);
         self.pc += 1;
-        self.tmp16 = ((value as u16) << 8) | (self.tmp16 & 0x00FF);
+        self.write8(Reg8::W, value);
     }
 
     fn execute_imm(&mut self, bus: &Bus) {
-        self.tmp8 = bus.read(self.pc);
-        self.tmp16 = self.tmp8 as u16;
+        self.z = bus.read(self.pc);
         self.pc += 1;
     }
 
@@ -476,7 +463,8 @@ impl Cpu {
             self.cond_ops.clear();
             self.cond_ops.append(&mut Self::decode_condition(self.ir));
         } else {
-            self.next_ops.append(&mut Self::decode_prefix());
+            self.next_ops.append(&mut Self::decode_prefix_opcode(self.ir));
+            self.cond_ops.clear();
             self.prefix = false;
         }
     }

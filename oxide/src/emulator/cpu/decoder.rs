@@ -4,7 +4,7 @@ use log::{debug, info, warn, error};
 use super::*;
 
 use std::collections::VecDeque;
-use crate::emulator::cpu::micro_ops::ShiftType::R;
+use crate::emulator::cpu::micro_ops::ShiftType::*;
 /*
  * CPU Instruction decoder.
  * Each instruction is converted to a deque of micro operations (see micro_ops.rs)
@@ -295,7 +295,89 @@ impl Cpu {
             _ => panic!("Unreachable")
         }
     }
-    
+
+    pub (super) fn decode_prefix_opcode(ir: u8) -> VecDeque<MicroOp> {
+        let x = ir >> 6;
+        let y = (ir & 0b00111000) >> 3;
+        let z = ir & 0b00000111;
+
+        let target = match z {
+            0 => RWTarget::Reg8(Reg8::B),
+            1 => RWTarget::Reg8(Reg8::C),
+            2 => RWTarget::Reg8(Reg8::D),
+            3 => RWTarget::Reg8(Reg8::E),
+            4 => RWTarget::Reg8(Reg8::H),
+            5 => RWTarget::Reg8(Reg8::L),
+            6 => RWTarget::Indirect16(Reg16::HL),
+            7 => RWTarget::Reg8(Reg8::A),
+            _ => panic!("Impossible Z value"),
+        };
+
+        match x {
+            0 => Self::decode_rot_opcode(target, y),
+            1 => Self::decode_bit_opcode(target, y),
+            2 => Self::decode_res_opcode(target, y),
+            3 => Self::decode_set_opcode(target, y),
+            _ => panic!("Impossible X value"),
+        }
+    }
+
+    fn decode_set_opcode(target: RWTarget, y: u8) -> VecDeque<MicroOp> {
+        match target {
+            RWTarget::Reg8(r) => Self::decode_rsb_rr(r, y, 1),
+            RWTarget::Indirect16(_) => Self::decode_rsb_indirect(y, 1),
+            _ => panic!("Should be unreachable")
+        }
+    }
+
+    fn decode_res_opcode(target: RWTarget, y: u8) -> VecDeque<MicroOp> {
+        match target {
+            RWTarget::Reg8(r) => Self::decode_rsb_rr(r, y, 0),
+            RWTarget::Indirect16(_) => Self::decode_rsb_indirect(y, 0),
+            _ => panic!("Should be unreachable")
+        }
+    }
+    fn decode_bit_opcode(target: RWTarget, y: u8) -> VecDeque<MicroOp> {
+        match target {
+            RWTarget::Reg8(r) => Self::decode_bit_rr(r, y),
+            RWTarget::Indirect16(_) => Self::decode_bit_indirect(y),
+            _ => panic!("Should be unreachable")
+        }
+    }
+    fn decode_rot_opcode(target: RWTarget, y: u8) -> VecDeque<MicroOp> {
+        let (left, shift) = match y {
+            0 => (true, RC),
+            1 => (false, RC),
+            2 => (true, R),
+            3 => (false, R),
+            4 => (true, SA),
+            5 => (false, SA),
+            7 => (true, SL),
+            6 => {
+                match target {
+                    RWTarget::Reg8(r) => {return Self::decode_swap_rr(r);},
+                    RWTarget::Indirect16(_) => {return Self::decode_swap_indirect();},
+                    _ => panic!("Should be unreachable")
+                };
+            }
+            _ => panic!("Should be unreachable")
+        };
+
+        if left {
+            match target {
+                RWTarget::Reg8(r) => {return Self::decode_rl_r8(r, shift);},
+                RWTarget::Indirect16(_) => {return Self::decode_rl_indirect(shift)},
+                _ => panic!("Should be unreachable")
+            };
+        } else {
+            match target {
+                RWTarget::Reg8(r) => {return Self::decode_rr_r8(r, shift);},
+                RWTarget::Indirect16(_) => {return Self::decode_rr_indirect(shift)},
+                _ => panic!("Should be unreachable")
+            };
+        }
+    }
+
     pub (super) fn decode_condition(ir: u8) -> VecDeque<MicroOp> {
         match ir {
             0x20 | 0x30 | 0x28 | 0x38 => Self::append_jr_cc(),

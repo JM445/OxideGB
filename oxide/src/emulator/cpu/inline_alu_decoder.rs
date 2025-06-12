@@ -47,9 +47,9 @@ impl Cpu {
     #[inline]
     pub fn decode_add_indirect(left: Reg8, right: Reg16, dest: Reg8) -> VecDeque<MicroOp> {
         VecDeque::from(vec![
-            MicroOp::DataMove {source: RWTarget::Indirect16(right), dest: RWTarget::Tmp8, prefetch: false},
+            MicroOp::DataMove {source: RWTarget::Indirect16(right), dest: RWTarget::Reg8(Reg8::Z), prefetch: false},
             MicroOp::Operation { ope: Operation::Add {
-                left: RWTarget::Reg8(left), right: RWTarget::Tmp8,
+                left: RWTarget::Reg8(left), right: RWTarget::Reg8(Reg8::Z),
                 dest: RWTarget::Reg8(dest), mask: 0b1111
             }, prefetch: true }
         ])
@@ -58,9 +58,9 @@ impl Cpu {
     #[inline]
     pub fn decode_sub_indirect(left: Reg8, right: Reg16, dest: Reg8) -> VecDeque<MicroOp> {
         VecDeque::from(vec![
-            MicroOp::DataMove {source: RWTarget::Indirect16(right), dest: RWTarget::Tmp8, prefetch: false},
+            MicroOp::DataMove {source: RWTarget::Indirect16(right), dest: RWTarget::Reg8(Reg8::Z), prefetch: false},
             MicroOp::Operation { ope: Operation::Sub {
-                left: RWTarget::Reg8(left), right: RWTarget::Tmp8,
+                left: RWTarget::Reg8(left), right: RWTarget::Reg8(Reg8::Z),
                 dest: RWTarget::Reg8(dest), mask: 0b1111
             }, prefetch: true }
         ])
@@ -69,9 +69,9 @@ impl Cpu {
     #[inline]
     pub fn decode_adc_indirect(left: Reg8, right: Reg16, dest: Reg8) -> VecDeque<MicroOp> {
         VecDeque::from(vec![
-            MicroOp::DataMove {source: RWTarget::Indirect16(right), dest: RWTarget::Tmp8, prefetch: false},
+            MicroOp::DataMove {source: RWTarget::Indirect16(right), dest: RWTarget::Reg8(Reg8::Z), prefetch: false},
             MicroOp::Operation { ope: Operation::Adc {
-                left: RWTarget::Reg8(left), right: RWTarget::Tmp8,
+                left: RWTarget::Reg8(left), right: RWTarget::Reg8(Reg8::Z),
                 dest: RWTarget::Reg8(dest), mask: 0b1111
             }, prefetch: true }
         ])
@@ -80,9 +80,9 @@ impl Cpu {
     #[inline]
     pub fn decode_sbc_indirect(left: Reg8, right: Reg16, dest: Reg8) -> VecDeque<MicroOp> {
         VecDeque::from(vec![
-            MicroOp::DataMove {source: RWTarget::Indirect16(right), dest: RWTarget::Tmp8, prefetch: false},
+            MicroOp::DataMove {source: RWTarget::Indirect16(right), dest: RWTarget::Reg8(Reg8::Z), prefetch: false},
             MicroOp::Operation { ope: Operation::Sbc {
-                left: RWTarget::Reg8(left), right: RWTarget::Tmp8,
+                left: RWTarget::Reg8(left), right: RWTarget::Reg8(Reg8::Z),
                 dest: RWTarget::Reg8(dest), mask: 0b1111
             }, prefetch: true }
         ])
@@ -93,7 +93,7 @@ impl Cpu {
         VecDeque::from(vec![
             MicroOp::ReadIMM {prefetch: false},
             MicroOp::Operation {ope: Operation::Add {
-                left: RWTarget::Reg8(left), right: RWTarget::Tmp8,
+                left: RWTarget::Reg8(left), right: RWTarget::Reg8(Reg8::Z),
                 dest: RWTarget::Reg8(dest), mask: 0b1111
             }, prefetch: true}
         ])
@@ -104,7 +104,7 @@ impl Cpu {
         VecDeque::from(vec![
             MicroOp::ReadIMM {prefetch: false},
             MicroOp::Operation {ope: Operation::Sub {
-                left: RWTarget::Reg8(left), right: RWTarget::Tmp8,
+                left: RWTarget::Reg8(left), right: RWTarget::Reg8(Reg8::Z),
                 dest: RWTarget::Reg8(dest), mask: 0b1111
             }, prefetch: true}
         ])
@@ -115,7 +115,7 @@ impl Cpu {
         VecDeque::from(vec![
             MicroOp::ReadIMM {prefetch: false},
             MicroOp::Operation {ope: Operation::Adc {
-                left: RWTarget::Reg8(left), right: RWTarget::Tmp8,
+                left: RWTarget::Reg8(left), right: RWTarget::Reg8(Reg8::Z),
                 dest: RWTarget::Reg8(dest), mask: 0b1111
             }, prefetch: true}
         ])
@@ -126,7 +126,7 @@ impl Cpu {
         VecDeque::from(vec![
             MicroOp::ReadIMM {prefetch: false},
             MicroOp::Operation {ope: Operation::Sbc {
-                left: RWTarget::Reg8(left), right: RWTarget::Tmp8,
+                left: RWTarget::Reg8(left), right: RWTarget::Reg8(Reg8::Z),
                 dest: RWTarget::Reg8(dest), mask: 0b1111
             }, prefetch: true}
         ])
@@ -149,7 +149,7 @@ impl Cpu {
         VecDeque::from(vec![
             MicroOp::ReadIMM {prefetch: false},
             MicroOp::Operation {ope: Operation::Sub {
-                left: RWTarget::Reg8(left), right: RWTarget::Tmp8,
+                left: RWTarget::Reg8(left), right: RWTarget::Reg8(Reg8::Z),
                 dest: RWTarget::Value(0), mask: 0b1111 // Dest is set to a value to discard the result
             }, prefetch: true}
         ])
@@ -158,9 +158,9 @@ impl Cpu {
     #[inline]
     pub fn decode_cp_indirect(left: Reg8, right: Reg16) -> VecDeque<MicroOp> {
         VecDeque::from(vec![
-            MicroOp::DataMove {source: RWTarget::Indirect16(right), dest: RWTarget::Tmp8, prefetch: false},
+            MicroOp::DataMove {source: RWTarget::Indirect16(right), dest: RWTarget::Reg8(Reg8::Z), prefetch: false},
             MicroOp::Operation {ope: Operation::Sub {
-                left: RWTarget::Reg8(left), right: RWTarget::Tmp8,
+                left: RWTarget::Reg8(left), right: RWTarget::Reg8(Reg8::Z),
                 dest: RWTarget::Value(0), mask: 0b1111 // Dest is set to a value to discard the result
             }, prefetch: true}
         ])
@@ -191,9 +191,9 @@ impl Cpu {
     #[inline]
     pub fn decode_inc_indirect(target: Reg16) -> VecDeque<MicroOp> {
         VecDeque::from(vec![
-            MicroOp::DataMove {source: RWTarget::Indirect16(target), dest: RWTarget::Tmp8, prefetch: false},
+            MicroOp::DataMove {source: RWTarget::Indirect16(target), dest: RWTarget::Reg8(Reg8::Z), prefetch: false},
             MicroOp::Operation {ope: Operation::Inc {
-                source: RWTarget::Tmp8, dest: RWTarget::Indirect16(target),
+                source: RWTarget::Reg8(Reg8::Z), dest: RWTarget::Indirect16(target),
                 mask: 0b1110
             }, prefetch: false},
             MicroOp::PrefetchOnly
@@ -203,9 +203,9 @@ impl Cpu {
     #[inline]
     pub fn decode_dec_indirect(target: Reg16) -> VecDeque<MicroOp> {
         VecDeque::from(vec![
-            MicroOp::DataMove {source: RWTarget::Indirect16(target), dest: RWTarget::Tmp8, prefetch: false},
+            MicroOp::DataMove {source: RWTarget::Indirect16(target), dest: RWTarget::Reg8(Reg8::Z), prefetch: false},
             MicroOp::Operation {ope: Operation::Dec {
-                source: RWTarget::Tmp8, dest: RWTarget::Indirect16(target),
+                source: RWTarget::Reg8(Reg8::Z), dest: RWTarget::Indirect16(target),
                 mask: 0b1110
             }, prefetch: false},
             MicroOp::PrefetchOnly
@@ -247,9 +247,9 @@ impl Cpu {
     #[inline]
     pub fn decode_and_indirect(left: Reg8, right: Reg16, dest: Reg8) -> VecDeque<MicroOp> {
         VecDeque::from(vec![
-            MicroOp::DataMove { source: RWTarget::Indirect16(right), dest: RWTarget::Tmp8, prefetch: false},
+            MicroOp::DataMove { source: RWTarget::Indirect16(right), dest: RWTarget::Reg8(Reg8::Z), prefetch: false},
             MicroOp::Operation { ope: Operation::And {
-                left: RWTarget::Reg8(left), right: RWTarget::Tmp8,
+                left: RWTarget::Reg8(left), right: RWTarget::Reg8(Reg8::Z),
                 dest: RWTarget::Reg8(dest), mask: 0b1111
             }, prefetch: true }
         ])
@@ -258,9 +258,9 @@ impl Cpu {
     #[inline]
     pub fn decode_or_indirect(left: Reg8, right: Reg16, dest: Reg8) -> VecDeque<MicroOp> {
         VecDeque::from(vec![
-            MicroOp::DataMove { source: RWTarget::Indirect16(right), dest: RWTarget::Tmp8, prefetch: false},
+            MicroOp::DataMove { source: RWTarget::Indirect16(right), dest: RWTarget::Reg8(Reg8::Z), prefetch: false},
             MicroOp::Operation { ope: Operation::Or {
-                left: RWTarget::Reg8(left), right: RWTarget::Tmp8,
+                left: RWTarget::Reg8(left), right: RWTarget::Reg8(Reg8::Z),
                 dest: RWTarget::Reg8(dest), mask: 0b1111
             }, prefetch: true }
         ])
@@ -269,9 +269,9 @@ impl Cpu {
     #[inline]
     pub fn decode_xor_indirect(left: Reg8, right: Reg16, dest: Reg8) -> VecDeque<MicroOp> {
         VecDeque::from(vec![
-            MicroOp::DataMove { source: RWTarget::Indirect16(right), dest: RWTarget::Tmp8, prefetch: false},
+            MicroOp::DataMove { source: RWTarget::Indirect16(right), dest: RWTarget::Reg8(Reg8::Z), prefetch: false},
             MicroOp::Operation { ope: Operation::Xor {
-                left: RWTarget::Reg8(left), right: RWTarget::Tmp8,
+                left: RWTarget::Reg8(left), right: RWTarget::Reg8(Reg8::Z),
                 dest: RWTarget::Reg8(dest), mask: 0b1111
             }, prefetch: true }
         ])
@@ -282,7 +282,7 @@ impl Cpu {
         VecDeque::from(vec![
             MicroOp::ReadIMM {prefetch: false},
             MicroOp::Operation {ope: Operation::And {
-                left: RWTarget::Reg8(left), right: RWTarget::Tmp8,
+                left: RWTarget::Reg8(left), right: RWTarget::Reg8(Reg8::Z),
                 dest: RWTarget::Reg8(dest), mask: 0b1111
             }, prefetch: true}
         ])
@@ -293,7 +293,7 @@ impl Cpu {
         VecDeque::from(vec![
             MicroOp::ReadIMM {prefetch: false},
             MicroOp::Operation {ope: Operation::Or {
-                left: RWTarget::Reg8(left), right: RWTarget::Tmp8,
+                left: RWTarget::Reg8(left), right: RWTarget::Reg8(Reg8::Z),
                 dest: RWTarget::Reg8(dest), mask: 0b1111
             }, prefetch: true}
         ])
@@ -304,7 +304,7 @@ impl Cpu {
         VecDeque::from(vec![
             MicroOp::ReadIMM {prefetch: false},
             MicroOp::Operation {ope: Operation::Xor {
-                left: RWTarget::Reg8(left), right: RWTarget::Tmp8,
+                left: RWTarget::Reg8(left), right: RWTarget::Reg8(Reg8::Z),
                 dest: RWTarget::Reg8(dest), mask: 0b1111
             }, prefetch: true}
         ])
@@ -330,7 +330,7 @@ impl Cpu {
         VecDeque::from(vec![
             MicroOp::ReadIMM {prefetch: false},
             MicroOp::Operation {ope: Operation::Ads {
-                left: RWTarget::Reg8(Reg8::SPL), right: RWTarget::Tmp8,
+                left: RWTarget::Reg8(Reg8::SPL), right: RWTarget::Reg8(Reg8::Z),
                 dest: RWTarget::Reg8(Reg8::Z), mask: 0b1111
             }, prefetch: false},
             MicroOp::Operation {ope: Operation::Adc{

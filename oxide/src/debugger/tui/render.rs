@@ -51,12 +51,15 @@ impl<'a> Ui<'a> {
     }
 
     fn draw_logger(&self, width: u16, height: u16) -> Paragraph {
+        if height < 2 || width < 1 {
+            return Paragraph::new("")
+        }
         let logger = Arc::clone(&GLOB_LOGGER);
 
         let lines = (*logger).entries.lock().unwrap().iter().map(|e| format_log(e.clone())).collect::<Vec<Line>>();
 
         let total_height : u16 = lines.iter().map(|l| {
-            ((l.width() as u16 + width -1) / width).max(1)
+            ((l.width() as u16 + width.saturating_sub(1)) / width).max(1)
         }).sum();
         let scroll = total_height.saturating_sub(height - 2);
 
@@ -86,7 +89,7 @@ impl<'a> Ui<'a> {
         lines.extend(padded_prev);
 
         // Add a separator
-        lines.push(std::iter::repeat('-').take(width as usize - 2).collect::<String>().into());
+        lines.push(std::iter::repeat('-').take((width as usize).saturating_sub(2)).collect::<String>().into());
 
         let index = block.instructions.iter()
             .take_while(
@@ -97,7 +100,7 @@ impl<'a> Ui<'a> {
             ).count();
         // Map the right amount of elements of the current block to a list of lines
         lines.extend(
-                block.instructions.iter().skip(index).take(height as usize - 6).map(
+                block.instructions.iter().skip(index).take((height as usize).saturating_sub(6)).map(
                     |i| {
                         let current = addr >= i.addr && addr < i.addr + i.size as u16;
                         Self::get_disassemble_line(&i.full_bytes, i.addr, current, false)

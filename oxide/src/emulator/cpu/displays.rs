@@ -42,14 +42,11 @@ impl fmt::Display for RWTarget {
         let s = match self {
             RWTarget::Reg8(trg) => format!("{trg}"),
             RWTarget::Reg16(trg) => format!("{trg}"),
-            RWTarget::Addr => "[WZ]".to_string(),
             RWTarget::Indirect16(trg) => format!("[{trg}]"),
-            RWTarget::Indirect8(trg) => format!("[{trg}]"),
-            RWTarget::Tmp8 => "TMP8".to_string(),
-            RWTarget::Tmp16 => "TMP16".to_string(),
             RWTarget::Value(v) => format!("{:#04X}", v),
             RWTarget::Indirect16D(trg) => format!("[{trg}-]"),
             RWTarget::Indirect16I(trg) => format!("[{trg}+]"),
+            RWTarget::HRAM(trg) => format!("[0xFF00 + {trg}]"),
             RWTarget::IME => "IME".to_string(),
         };
 

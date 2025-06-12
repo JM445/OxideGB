@@ -33,6 +33,9 @@ pub struct Cpu {
     pub e: u8, // General Purpose
     pub h: u8, // General Purpose
     pub l: u8, // General Purpose
+    
+    pub w: u8, // TMP Register
+    pub z: u8, // TMP Register
 
     pub sp: u16, // Stack Pointer
     pub pc: u16, // Program Counter
@@ -41,8 +44,6 @@ pub struct Cpu {
     pub ir: u8,    // Instruction Register
     pub ir_pc: u16,// Address of current instruction
     prefix: bool,  // Was the last decoded instruction the 0xCB prefix ?
-    tmp8: u8,
-    tmp16: u16,
     next_ops: VecDeque<MicroOp>,
     cond_ops: VecDeque<MicroOp>,
 }
@@ -58,6 +59,9 @@ impl Cpu {
             e: 0,
             h: 0,
             l: 0,
+            
+            w: 0,
+            z: 0,
 
             sp: 0,
             pc: initial_pc,
@@ -66,8 +70,6 @@ impl Cpu {
             ir: 0,
             ir_pc: 0,
             prefix: false,
-            tmp8: 0,
-            tmp16: 0,
             next_ops: VecDeque::new(),
             cond_ops: VecDeque::new()
         }

@@ -135,7 +135,7 @@ impl Cpu {
         VecDeque::from(vec![
             MicroOp::ReadIMM{prefetch: false},
             MicroOp::Operation {ope: Operation::Ads {
-                left: RWTarget::Reg16(Reg16::WZ), right: RWTarget::Tmp8,
+                left: RWTarget::Reg16(Reg16::PC), right: RWTarget::Reg8(Reg8::Z),
                 dest: RWTarget::Reg16(Reg16::WZ), mask: 0b0000
             }, prefetch: false},
             MicroOp::DataMove{
@@ -155,9 +155,10 @@ impl Cpu {
     pub fn append_jr_cc() -> VecDeque<MicroOp> {
         VecDeque::from(vec![
             MicroOp::Operation {ope: Operation::Ads {
-                left: RWTarget::Reg16(Reg16::PC), right: RWTarget::Reg8(Reg8::W), dest: RWTarget::Reg16(Reg16::PC), mask: 0b0000
+                left: RWTarget::Reg16(Reg16::PC), right: RWTarget::Reg8(Reg8::Z),
+                dest: RWTarget::Reg16(Reg16::WZ), mask: 0b0000
             }, prefetch: false},
-            MicroOp::PrefetchOnly
+            MicroOp::DataMove {source: RWTarget::Reg16(Reg16::WZ), dest: RWTarget::Reg16(Reg16::PC), prefetch: true}
         ])
     }
 

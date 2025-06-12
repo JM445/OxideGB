@@ -98,8 +98,8 @@ impl Cpu {
             Reg8::PCL => self.pc as u8,
             Reg8::SPH => (self.sp >> 8) as u8,
             Reg8::SPL => self.sp as u8,
-            Reg8::W => (self.tmp16 >> 8) as u8,
-            Reg8::Z => self.tmp16 as u8
+            Reg8::W => self.w,
+            Reg8::Z => self.z
         }
     }
 
@@ -111,7 +111,7 @@ impl Cpu {
             Reg16::HL => ((self.h as u16) << 8) | (self.l as u16),
             Reg16::SP => self.sp,
             Reg16::PC => self.pc,
-            Reg16::WZ => self.tmp16
+            Reg16::WZ => ((self.w as u16) << 8) | (self.z as u16),
         }
     }
 
@@ -129,8 +129,8 @@ impl Cpu {
             Reg8::PCL => self.pc = (value as u16) | (self.pc & 0xFF00),
             Reg8::SPH => self.sp = (self.sp & 0x00FF) | (value as u16) << 8,
             Reg8::SPL => self.sp = (value as u16) | (self.sp & 0xFF00),
-            Reg8::W   => self.tmp16 = (self.tmp16 & 0x00FF) | ((value as u16) << 8),
-            Reg8::Z   => self.tmp16 = (self.tmp16 & 0xFF00) | (value as u16)
+            Reg8::W   => self.w = value,
+            Reg8::Z   => self.z = value,
         }
     }
 
@@ -154,7 +154,10 @@ impl Cpu {
             },
             Reg16::SP => self.sp = value,
             Reg16::PC => self.pc = value,
-            Reg16::WZ => self.tmp16 = value,
+            Reg16::WZ => { 
+                self.w = (value >> 8) as u8;
+                self.z = value as u8;
+            },
         };
     }
 }
