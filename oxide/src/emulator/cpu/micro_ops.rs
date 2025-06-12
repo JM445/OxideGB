@@ -300,9 +300,14 @@ impl Cpu {
 
         if prefetch {
             let old_opcode = self.ir;
-            dbg.on_cpu_event(DebugEvent::InstructionEnd(old_opcode), self, bus);
+            let prefix = self.prefix;
+            if !prefix {
+                dbg.on_cpu_event(DebugEvent::InstructionEnd(old_opcode), self, bus);
+            }
             self.execute_prefetch(bus);
-            dbg.on_cpu_event(DebugEvent::IrPrefetch(self.ir, self.pc - 1), self, bus);
+            if !prefix {
+                dbg.on_cpu_event(DebugEvent::IrPrefetch(self.ir, self.pc - 1), self, bus);
+            }
         }
         dbg.on_cpu_event(DebugEvent::MicroOpEnd(op), self, bus);
 
