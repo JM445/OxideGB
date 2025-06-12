@@ -53,10 +53,10 @@ impl Debugger for FullDebugger {
 }
 
 impl FullDebugger {
-    pub fn new() -> Self {
+    pub fn new(start_addr: u16) -> Self {
         FullDebugger {
             breakpoints: Vec::new(),
-            cur_instr: 0,
+            cur_instr: start_addr,
             last_instructions: VecDeque::new(),
             debug_stop: false,
         }

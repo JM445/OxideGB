@@ -39,7 +39,7 @@ pub struct Cpu {
 
     pub ime: bool, // Iterrupt Enable flag
     pub ir: u8,    // Instruction Register
-
+    pub ir_pc: u16,// Address of current instruction
     prefix: bool,  // Was the last decoded instruction the 0xCB prefix ?
     tmp8: u8,
     tmp16: u16,
@@ -64,6 +64,7 @@ impl Cpu {
 
             ime: false,
             ir: 0,
+            ir_pc: 0,
             prefix: false,
             tmp8: 0,
             tmp16: 0,

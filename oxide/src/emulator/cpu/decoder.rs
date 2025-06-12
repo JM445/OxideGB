@@ -295,4 +295,14 @@ impl Cpu {
             _ => panic!("Unreachable")
         }
     }
+    
+    pub (super) fn decode_condition(ir: u8) -> VecDeque<MicroOp> {
+        match ir {
+            0x20 | 0x30 | 0x28 | 0x38 => Self::append_jr_cc(),
+            0xC0 | 0xD0 | 0xC8 | 0xD8 => Self::decode_ret(),
+            0xC2 | 0xD2 | 0xCA | 0xDA => Self::append_jp_cc_nn(),
+            0xC4 | 0xD4 | 0xCC | 0xDC => Self::append_call_cc(),
+            _ => VecDeque::new()
+        }
+    }
 }

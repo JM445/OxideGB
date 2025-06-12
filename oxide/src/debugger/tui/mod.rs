@@ -2,6 +2,7 @@ pub mod ui_logger;
 pub mod ui_utils;
 mod render;
 mod parser;
+mod mem_view;
 
 use crate::emulator::*;
 use super::*;
@@ -14,7 +15,7 @@ use std::{fmt, io};
 use std::collections::VecDeque;
 use std::time::Duration;
 use std::path::Path;
-//use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
+
 use ratatui::{
     widgets::{Block, Borders},
     text::{Line},
@@ -24,22 +25,20 @@ use ratatui::{
 };
 
 use tui_textarea::{TextArea, Input};
-use crate::debugger::dissassembler::CodeMap;
+use crate::debugger::dissassembler::{CodeBlock, CodeMap};
 
 pub struct Ui<'a> {
     exit: bool,
-    memory_start: u16,
+    memory_watches: VecDeque<(u16, usize)>,
     emulator: Emulator,
     cmd_area: TextArea<'a>,
     debugger: FullDebugger,
     last_cmd: Option<String>,
-    top_pc: u16,
     code_map: CodeMap,
-    last_instructions: VecDeque<&'a[u16; 4]>
 }
 
 impl<'a> Ui<'a> {
-    pub fn new(emu: Emulator, dbg: FullDebugger) -> Ui<'a> {
+    pub fn new(emu: Emulator, dbg: FullDebugger, starting_pc: u16) -> Ui<'a> {
         let mut textarea = TextArea::default();
 
         textarea.set_cursor_line_style(Style::default());
@@ -50,14 +49,12 @@ impl<'a> Ui<'a> {
 
         Ui {
             exit: false,
-            memory_start: 0x0000,
+            memory_watches: VecDeque::new(),
             emulator: emu,
             cmd_area: textarea,
             debugger: dbg,
             last_cmd: None,
-            top_pc: 0,
-            code_map: CodeMap::new(),
-            last_instructions: VecDeque::new()
+            code_map: CodeMap::new(starting_pc),
         }
     }
 
@@ -111,8 +108,11 @@ impl<'a> Ui<'a> {
 }
 
 pub fn tui_main<P: AsRef<Path>>(rom_path: P, boot_path: P) -> Result<(), String> {
-    let mut ui = Ui::new(Emulator::new(rom_path, boot_path)?, FullDebugger::new());
-//    ui.emulator.tick(&mut ui.debugger);
+    let emu = Emulator::new(rom_path, boot_path)?;
+    let dbg =  FullDebugger::new(emu.cpu.pc);
+    let pc = emu.cpu.pc;
+    let mut ui = Ui::new(emu, dbg, pc);
+
     if let Ok(_) = ui.run() {
         Ok(())
     } else {

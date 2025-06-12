@@ -165,7 +165,7 @@ impl Cpu {
         ((((res.0 & 0xFF) == 0) as u8) << 3) |              // Z
         0b0100 |                                            // N
         (((left.0 & 0xF) < (borrow.0 & 0xF)) as u8) << 2 |  // H
-        (((left.0 & 0xFF) < (borrow.0 & 0xFF)) as u8) << 3) // C
+        (((left.0 & 0xFF) < (borrow.0 & 0xFF)) as u8)) // C
     }
 
     fn alu_and(left: Wrapping<u16>, right: Wrapping<u16>) -> (u16, u8) {
@@ -464,9 +464,12 @@ impl Cpu {
 
     pub (super) fn execute_prefetch(&mut self, bus: &Bus) {
         self.ir = bus.read(self.pc);
+        self.ir_pc = self.pc;
         self.pc += 1;
         if !self.prefix  {
             self.next_ops.append(&mut Self::decode(self.ir));
+            self.cond_ops.clear();
+            self.cond_ops.append(&mut Self::decode_condition(self.ir));
         } else {
             self.next_ops.append(&mut Self::decode_prefix());
             self.prefix = false;

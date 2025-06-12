@@ -4,6 +4,7 @@ use super::dissassembler::opcodes::*;
 use super::ui_utils::*;
 use super::ui_logger::*;
 use crate::emulator::cpu::registers::*;
+use super::mem_view::*;
 
 use ratatui::{
     layout::{Constraint, Direction, Layout, Alignment},
@@ -67,37 +68,11 @@ impl<'a> Ui<'a> {
                             .scroll((scroll, 0))
     }
 
-    fn draw_memory(&self, size: u16) -> Table {
-        let mut rows = Vec::new();
-        let mut sizes = vec![Constraint::Length(6)];
-        let row_sz = 16;
-
-        for _ in 0..row_sz {
-            sizes.push(Constraint::Length(2));
-        }
-
-        for cur in 0..size {
-            let mut row_data = vec![Cell::from(Span::from(format!("{:04X} | ", self.memory_start + (cur * row_sz))).blue().bold())];
-            let mut tmp = self.emulator.bus.iter_at(self.memory_start + (cur * row_sz))
-                                           .take(row_sz as usize)
-                                           .map(|c| Cell::from(format!("{:02X}", c)))
-                                           .collect::<Vec<_>>();
-            row_data.append(&mut tmp);
-            let row = Row::new(row_data).height(1);
-            rows.push(row);
-        }
-        Table::new(rows, sizes).block(
-            Block::default()
-                .title(Line::from("Memory").centered())
-                .borders(Borders::ALL)
-                .padding(Padding::uniform(1))
-        )
-    }
-
     fn draw_disassembly(&mut self, height: u16, width: u16) -> Paragraph {
         let mut lines = Vec::new();
-        let mem = &self.emulator.bus;
-        let block = self.code_map.get_block(self.emulator.cpu.pc, &self.emulator.bus);
+        let addr = self.emulator.cpu.ir_pc;
+        let (block, _) = self.code_map.get_block(&self.emulator.bus, &self.emulator.cpu);
+        let new_block = addr == block.start_addr;
 
         // Map the previously executed instructions to a list of lines
         let mut padded_prev = self.debugger.last_instructions.iter()
@@ -116,8 +91,7 @@ impl<'a> Ui<'a> {
         let index = block.instructions.iter()
             .take_while(
                 |i| {
-                    let mut fixed_pc = self.emulator.cpu.pc.wrapping_sub(1);
-                    fixed_pc = if self.emulator.cpu.pc == 0 {0} else {fixed_pc};
+                    let fixed_pc = addr;
                     !(fixed_pc >= i.addr && fixed_pc < i.addr + i.size as u16)
                 }
             ).count();
@@ -125,7 +99,7 @@ impl<'a> Ui<'a> {
         lines.extend(
                 block.instructions.iter().skip(index).take(height as usize - 6).map(
                     |i| {
-                        let current = self.emulator.cpu.pc.wrapping_sub(1) >= i.addr && self.emulator.cpu.pc.wrapping_sub(1) < i.addr + i.size as u16;
+                        let current = addr >= i.addr && addr < i.addr + i.size as u16;
                         Self::get_disassemble_line(&i.full_bytes, i.addr, current, false)
                     } 
                 )
@@ -155,39 +129,6 @@ impl<'a> Ui<'a> {
 
         Line::from(x)
     }
-    // fn draw_dissassembly_old(&mut self, size: u16) -> Paragraph {
-    //     let mut lines = Vec::new();
-    //     let mem = &self.emulator.bus;
-    // 
-    //     while self.emulator.cpu.pc > self.top_pc + 10 {
-    //         self.top_pc += 1
-    //     }
-    // 
-    //     let mut cur_pc = self.top_pc;
-    // 
-    //     for _ in 0..size {
-    //         let bytes = mem.get_instruction(cur_pc);
-    //         let len = get_instruction_length(bytes[0]);
-    //         lines.push(Line::from(vec![
-    //             format!("{:#06X} | ", cur_pc).blue().bold().into(),
-    //             if cur_pc >= self.emulator.cpu.pc - 1 &&
-    //                 cur_pc < self.emulator.cpu.pc + get_instruction_length(self.emulator.bus.read(self.emulator.cpu.pc)) - 1
-    //             {
-    //                 format!("{:<width$}", disassemble(&bytes), width=20).reversed().into()
-    //             } else {
-    //                 format!("{:<width$}", disassemble(&bytes), width=20).into()
-    //             },
-    //             "| ".into(),
-    //             bytes.iter().take(len as usize).map(|x| format!("{:#04X}", x)).collect::<Vec<_>>().join(" ").into(),
-    //         ]));
-    //         cur_pc += len;
-    //     }
-    //     Paragraph::new(lines).block(Block::default()
-    //                                 .title(Line::from("Disassembly").left_aligned())
-    //                                 .borders(Borders::ALL)
-    //                                 .padding(Padding::uniform(1)))
-    //                          .alignment(Alignment::Left)
-    // }
 
     fn draw_registers(&self) -> Paragraph {
         let cpu = &self.emulator.cpu;
@@ -207,19 +148,26 @@ impl<'a> Ui<'a> {
             Line::from(vec![
                 "D: ".blue().bold().into(),  format!("{:#04X}", cpu.d).into(), "  ".into(),
                 "E: ".blue().bold().into(),  format!("{:#04X}", cpu.e).into(), "  ".into(),
-                "DE: ".blue().bold().into(), format!("{:#06X}", cpu.read16(Reg16::DE)).into(), "             ".into(),
+                "DE: ".blue().bold().into(), format!("{:#06X}", cpu.read16(Reg16::DE)).into(), "  ".into(),
+                "WZ: ".blue().bold().into(), format!("{:#06X}", cpu.read16(Reg16::WZ)).into(),
             ]),
             Line::from(vec![
                 "H: ".blue().bold().into(),  format!("{:#04X}", cpu.h).into(), "  ".into(),
                 "L: ".blue().bold().into(),  format!("{:#04X}", cpu.l).into(), "  ".into(),
                 "HL: ".blue().bold().into(), format!("{:#06X}", cpu.read16(Reg16::HL)).into(), "            ".into(),
             ]),
+            Line::from(vec![
+                "Z: ".blue().bold().into(), format!("{} ", cpu.get_flag(Flag::Z)).into(),
+                "N: ".blue().bold().into(), format!("{} ", cpu.get_flag(Flag::N)).into(),
+                "H: ".blue().bold().into(), format!("{} ", cpu.get_flag(Flag::H)).into(),
+                "C: ".blue().bold().into(), format!("{} ", cpu.get_flag(Flag::C)).into(),
+            ])
         ];
 
         Paragraph::new(lines).block(Block::default()
                                     .title(Line::from("Registers").right_aligned())
                                     .borders(Borders::ALL)
-                                    .padding(Padding::uniform(1)))
+                                    .padding(Padding::new(1, 1, 1, 0)))
                              .alignment(Alignment::Center)
     }
 }

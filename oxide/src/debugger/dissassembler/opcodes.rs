@@ -27,7 +27,7 @@ pub fn disassemble(bytes: &[u8]) -> String {
         0x15 => format!("DEC D"),
         0x16 => format!("LD D, {:#04X}", bytes.get(1).copied().unwrap_or(0)),
         0x17 => format!("RLA"),
-        0x18 => format!("JR r8"),
+        0x18 => format!("JR {}", bytes.get(1).copied().unwrap_or(0) as i8),
         0x19 => format!("ADD HL, DE"),
         0x1A => format!("LD A, (DE)"),
         0x1B => format!("DEC DE"),
@@ -35,7 +35,7 @@ pub fn disassemble(bytes: &[u8]) -> String {
         0x1D => format!("DEC E"),
         0x1E => format!("LD E, {:#04X}", bytes.get(1).copied().unwrap_or(0)),
         0x1F => format!("RRA"),
-        0x20 => format!("JR NZ, r8"),
+        0x20 => format!("JR NZ, {}", bytes.get(1).copied().unwrap_or(0) as i8),
         0x21 => format!("LD HL, {:#06X}", ((bytes.get(2).copied().unwrap_or(0) as u16) << 8 | bytes.get(1).copied().unwrap_or(0) as u16)),
         0x22 => format!("LD (HL+), A"),
         0x23 => format!("INC HL"),
@@ -43,7 +43,7 @@ pub fn disassemble(bytes: &[u8]) -> String {
         0x25 => format!("DEC H"),
         0x26 => format!("LD H, {:#04X}", bytes.get(1).copied().unwrap_or(0)),
         0x27 => format!("DAA"),
-        0x28 => format!("JR Z, r8"),
+        0x28 => format!("JR Z, {}", bytes.get(1).copied().unwrap_or(0) as i8),
         0x29 => format!("ADD HL, HL"),
         0x2A => format!("LD A, (HL+)"),
         0x2B => format!("DEC HL"),
@@ -51,7 +51,7 @@ pub fn disassemble(bytes: &[u8]) -> String {
         0x2D => format!("DEC L"),
         0x2E => format!("LD L, {:#04X}", bytes.get(1).copied().unwrap_or(0)),
         0x2F => format!("CPL"),
-        0x30 => format!("JR NC, r8"),
+        0x30 => format!("JR NC, {}", bytes.get(1).copied().unwrap_or(0) as i8),
         0x31 => format!("LD SP, {:#06X}", ((bytes.get(2).copied().unwrap_or(0) as u16) << 8 | bytes.get(1).copied().unwrap_or(0) as u16)),
         0x32 => format!("LD (HL-), A"),
         0x33 => format!("INC SP"),
@@ -59,7 +59,7 @@ pub fn disassemble(bytes: &[u8]) -> String {
         0x35 => format!("DEC (HL)"),
         0x36 => format!("LD (HL), {:#04X}", bytes.get(1).copied().unwrap_or(0)),
         0x37 => format!("SCF"),
-        0x38 => format!("JR C, r8"),
+        0x38 => format!("JR C, {}", bytes.get(1).copied().unwrap_or(0) as i8),
         0x39 => format!("ADD HL, SP"),
         0x3A => format!("LD A, (HL-)"),
         0x3B => format!("DEC SP"),
@@ -206,7 +206,7 @@ pub fn disassemble(bytes: &[u8]) -> String {
         0xC8 => format!("RET Z"),
         0xC9 => format!("RET"),
         0xCA => format!("JP Z, {:#06X}", ((bytes.get(2).copied().unwrap_or(0) as u16) << 8 | bytes.get(1).copied().unwrap_or(0) as u16)),
-        0xCB => format!("PREFIX CB"),
+        0xCB => disassemble_prefixed(&bytes[1..]),
         0xCC => format!("CALL Z, {:#06X}", ((bytes.get(2).copied().unwrap_or(0) as u16) << 8 | bytes.get(1).copied().unwrap_or(0) as u16)),
         0xCD => format!("CALL {:#06X}", ((bytes.get(2).copied().unwrap_or(0) as u16) << 8 | bytes.get(1).copied().unwrap_or(0) as u16)),
         0xCE => format!("ADC A, {:#04X}", bytes.get(1).copied().unwrap_or(0)),
@@ -822,7 +822,7 @@ impl InstructionMeta {
     
     pub fn is_dead_end(&self) -> bool {
         ((self.is_call && !self.is_cond) || (self.is_ret && !self.is_cond) ||
-            (self.is_jump && !self.is_cond && self.is_dynamic)) && Bus::is_same_block(self.addr, self.next)
+            (self.is_jump && (!self.is_cond || self.is_dynamic))) && Bus::is_same_block(self.addr, self.next)
     }
 }
 

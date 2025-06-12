@@ -1,10 +1,12 @@
 use crate::debugger::full_debugger::*;
 
+use super::mem_view::*;
+
 use log::{debug};
 use super::*;
 
 use std::str::FromStr;
-use num_traits::PrimInt;
+use num_traits::{Num, PrimInt};
 
 
 
@@ -28,6 +30,7 @@ impl<'a> Ui<'a> {
                 },
                 "break" | "b" => {self.parse_breakpoint(&words[1..]);},
                 "continue" | "c" => self.tick(),
+                "mem" | "m" => self.parse_mem(&words[1..]),
                 _ => {
                     self.last_cmd = None;
                     self.cmd_area.insert_str(format!("Error: Unknown command: {}\n> ", line));
@@ -37,7 +40,7 @@ impl<'a> Ui<'a> {
             self.parse_line(last);
         }
     }
-
+    
     fn parse_breakpoint(&mut self, words: &[&str]) -> bool {
         if words.len() < 1 || words.len() > 3 {
             self.cmd_area.insert_str("Error: Invalid breakpoint argument count !\nUsage: break type value");
@@ -60,7 +63,7 @@ impl<'a> Ui<'a> {
                 } else {false}
             },
             "addr" | "a" => {
-                if let Some(a) = parse_numeric(words, 1) {
+                if let Ok(a) = parse_hex_or_dec(words[1]) {
                     self.debugger.add_breakpoint(Breakpoint::Address(a));
                     debug!("Added a breakpoint at address {}", a);
                     true
@@ -75,7 +78,17 @@ impl<'a> Ui<'a> {
 
 }
 
-fn parse_numeric<T>(words: &[&str], pos: usize) -> Option<T>
+pub fn parse_hex_or_dec<T>(num: &str) -> Result<T, <T as Num>::FromStrRadixErr>
+where T: Num + Copy,
+{
+    if let Some(hex) = num.strip_prefix("0x") {
+        T::from_str_radix(hex, 16)
+    } else {
+        T::from_str_radix(num, 10)
+    }
+}
+
+pub fn parse_numeric<T>(words: &[&str], pos: usize) -> Option<T>
 where T: PrimInt + FromStr {
     if words.len() > pos {
         if let Ok(n) = words[1].parse() {

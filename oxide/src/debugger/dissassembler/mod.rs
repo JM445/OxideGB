@@ -3,6 +3,7 @@ pub mod opcodes;
 use std::collections::{HashMap, HashSet};
 use log::debug;
 use opcodes::*;
+use crate::emulator::cpu::Cpu;
 use crate::emulator::memory::{Bus, MemBlock};
 
 
@@ -127,17 +128,19 @@ impl CodeBlock {
 }
 
 impl CodeMap {
-    pub fn new() -> Self {
+    pub fn new(starting_addr: u16) -> Self {
         Self {
             rom_blocks: HashMap::new(),
             ram_blocks: HashMap::new(),
         }
     }
 
-    pub fn get_block(&mut self, addr: u16, bus: &Bus) -> &CodeBlock {
+    pub fn get_block(&mut self, bus: &Bus, cpu: &Cpu) -> (&CodeBlock, bool) {
         let rom_bank = bus.get_rom_bank();
         let ram_bank = bus.get_ram_bank();
         let cur_block: &mut CodeBlock;
+        let mut new_block = false;
+        let addr = cpu.ir_pc;
 
         if Bus::is_ram(addr) {
             let search = self.ram_blocks.iter().find(|b| {
@@ -152,6 +155,7 @@ impl CodeMap {
                 self.ram_blocks.insert((ram_bank, addr), block);
                 cur_block = self.ram_blocks.get_mut(&(ram_bank, addr)).unwrap();
                 if cur_block.dynamic {cur_block.update(bus);}
+                new_block = true;
             }
         } else {
             let search = self.rom_blocks.iter().find(|b| {
@@ -165,9 +169,10 @@ impl CodeMap {
                 let block = CodeBlock::new(addr, bus);
                 self.rom_blocks.insert((rom_bank, addr), block);
                 cur_block = self.rom_blocks.get_mut(&(rom_bank, addr)).unwrap();
+                new_block = true;
             }
         }
 
-        cur_block
+        (cur_block, new_block)
     }
 }
