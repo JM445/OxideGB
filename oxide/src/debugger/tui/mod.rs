@@ -3,6 +3,7 @@ pub mod ui_utils;
 mod render;
 mod parser;
 mod mem_view;
+mod lexer;
 
 use crate::emulator::*;
 use super::*;

@@ -15,6 +15,7 @@ pub enum MicroOp {
     ReadLSB{prefetch: bool},
     ReadMSB{prefetch: bool},
     ReadMSBCC {cc: Condition},
+    ReadLSBCC {cc: Condition},
     CheckCC {cc: Condition},
     Cpl, Daa, Ccf, Scf, Prefix,
     RetI,
@@ -125,13 +126,13 @@ impl Cpu {
             self.set_flag(Flag::Z, (value & 0b1000) >> 3);
         }
         if mask & 0b0100 != 0 {
-            self.set_flag(Flag::N, (value & 0b0100) >> 3);
+            self.set_flag(Flag::N, (value & 0b0100) >> 2);
         }
         if mask & 0b0010 != 0 {
-            self.set_flag(Flag::H, (value & 0b0010) >> 3);
+            self.set_flag(Flag::H, (value & 0b0010) >> 1);
         }
         if mask & 0b0001 != 0 {
-            self.set_flag(Flag::C, (value & 0b0001) >> 3);
+            self.set_flag(Flag::C, value & 0b0001);
         }
     }
 
@@ -206,7 +207,7 @@ impl Cpu {
     }
 
     fn alu_bit(val: Wrapping<u8>, bit: u8) -> (u16, u8) {
-        let res = ((val.0 & (1 << bit)) != 0) as u8;
+        let res = !((val.0 & (1 << bit)) != 0) as u8;
         (res as u16, (res << 3) | 0x02)
     }
 
@@ -224,9 +225,10 @@ impl Cpu {
             MicroOp::Operation{prefetch, ..} |
             MicroOp::ReadIMM{prefetch} |
             MicroOp::ReadLSB{prefetch} |
-            MicroOp::ReadMSB{prefetch} => *prefetch,
-            MicroOp::ReadMSBCC { .. } => false,
-            MicroOp::CheckCC { .. } => false,
+            MicroOp::ReadMSB{prefetch}  => *prefetch,
+            MicroOp::ReadMSBCC { .. } |
+            MicroOp::ReadLSBCC { .. } |
+            MicroOp::CheckCC { .. }   |
             MicroOp::RetI { .. } => false,
             MicroOp::PrefetchOnly | MicroOp::Cpl | MicroOp::Daa |
             MicroOp::Ccf | MicroOp::Scf | MicroOp::Prefix => true,
@@ -240,6 +242,10 @@ impl Cpu {
             MicroOp::ReadMSB{..}  => self.execute_read_msb(bus),
             MicroOp::ReadMSBCC {cc} => {
                 self.execute_read_msb(bus);
+                self.execute_cc(cc);
+            },
+            MicroOp::ReadLSBCC {cc} => {
+                self.execute_read_lsb(bus);
                 self.execute_cc(cc);
             },
             MicroOp::CheckCC {cc} => self.execute_cc(cc),
@@ -480,7 +486,9 @@ impl Cpu {
             Condition::NC | Condition::NZ => |v| {v == 0},
         };
 
-        if check(val) {
+        let test = check(val);
+        debug!{"Condition {cc}: {test}"};
+        if test {
             self.next_ops.append(&mut self.cond_ops)
         } else {
             self.cond_ops.clear();

@@ -10,6 +10,7 @@ impl fmt::Display for MicroOp {
             MicroOp::ReadLSB{prefetch} => format!("ReadLSB({prefetch})"),
             MicroOp::ReadMSB{prefetch} => format!("ReadMSB({prefetch})"),
             MicroOp::ReadMSBCC { cc } => format!("ReadMSBCC({cc})"),
+            MicroOp::ReadLSBCC { cc } => format!("ReadLSBCC({cc})"),
             MicroOp::CheckCC { cc } => format!("CheckCC({cc})"),
             MicroOp::RetI => "RETI".to_string(),
             MicroOp::Ccf => "CCF".to_string(),

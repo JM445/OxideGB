@@ -4,6 +4,7 @@ use super::mem_view::*;
 
 use log::{debug};
 use super::*;
+use super::ui_utils::*;
 
 use std::str::FromStr;
 use num_traits::{Num, PrimInt};
@@ -76,28 +77,4 @@ impl<'a> Ui<'a> {
         }
     }
 
-}
-
-pub fn parse_hex_or_dec<T>(num: &str) -> Result<T, <T as Num>::FromStrRadixErr>
-where T: Num + Copy,
-{
-    if let Some(hex) = num.strip_prefix("0x") {
-        T::from_str_radix(hex, 16)
-    } else {
-        T::from_str_radix(num, 10)
-    }
-}
-
-pub fn parse_numeric<T>(words: &[&str], pos: usize) -> Option<T>
-where T: PrimInt + FromStr {
-    if words.len() > pos {
-        if let Ok(n) = words[1].parse() {
-            Some(n)
-        } else {
-            error!("Error: Invalid tick number: {}", words[1]);
-            return None;
-        }
-    } else {
-        Some(T::one())
-    }
 }

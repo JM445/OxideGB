@@ -147,7 +147,7 @@ impl Cpu {
     #[inline]
     pub fn decode_jr_cc(cc: Condition) -> VecDeque<MicroOp> {
         VecDeque::from(vec![
-            MicroOp::ReadMSBCC {cc}
+            MicroOp::ReadLSBCC {cc}
         ])
     }
 
