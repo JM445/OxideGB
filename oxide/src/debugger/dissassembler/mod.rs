@@ -11,7 +11,7 @@ use crate::emulator::memory::{Bus, MemBlock};
  * Struct and utilities to map code paths dynamically
  */
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Hash, Eq, PartialEq)]
 pub struct InstructionMeta {
     pub opcode: u8,
     pub addr: u16,
@@ -31,17 +31,17 @@ pub struct InstructionMeta {
 pub struct CodeBlock {
     pub start_addr: u16,
     pub instructions: Vec<InstructionMeta>,
-    pub dynamic: bool,
     pub invalid: bool,
     pub size: usize,
     pub mem_block: MemBlock,
+    pub hash: u64,
     visited: HashSet<u16>,
     linked: HashSet<u16>,
+    
 }
 
 pub struct CodeMap {
-    pub rom_blocks: HashMap<(usize, u16), CodeBlock>,
-    pub ram_blocks: HashMap<(usize, u16), CodeBlock>,
+    pub blocks: HashMap<u16, CodeBlock>,
 }
 
 impl InstructionMeta {
@@ -75,12 +75,12 @@ impl CodeBlock {
         let mut res = CodeBlock {
             start_addr: addr,
             instructions: Vec::new(),
-            dynamic: Self::is_dynamic(addr),
             invalid: false,
             size: 0,
             visited: HashSet::new(),
             linked: HashSet::new(),
             mem_block: MemBlock::from_addr(addr),
+            hash: 0,
         };
 
         res.init(bus);
@@ -113,9 +113,15 @@ impl CodeBlock {
             }
             addr += cur.size as u16;
         }
+        
+        self.hash = bus.hash_region(self.start_addr, self.size);
 
         // Remove from linked list all addresses that are in the current block
         self.linked.retain(|e| !self.visited.contains(e));
+    }
+    
+    pub fn has_changes(&self, bus: &Bus) -> bool {
+        self.hash == bus.hash_region(self.start_addr, self.size)
     }
 
     pub fn update(&mut self, bus: &Bus) {
@@ -130,47 +136,30 @@ impl CodeBlock {
 impl CodeMap {
     pub fn new(starting_addr: u16) -> Self {
         Self {
-            rom_blocks: HashMap::new(),
-            ram_blocks: HashMap::new(),
+            blocks: HashMap::new(),
         }
     }
 
     pub fn get_block(&mut self, bus: &Bus, cpu: &Cpu) -> (&CodeBlock, bool) {
-        let rom_bank = bus.get_rom_bank();
-        let ram_bank = bus.get_ram_bank();
         let cur_block: &mut CodeBlock;
         let mut new_block = false;
         let addr = cpu.ir_pc;
 
-        if Bus::is_ram(addr) {
-            let search = self.ram_blocks.iter().find(|b| {
-                addr >= b.1.start_addr && addr < b.1.start_addr + b.1.size as u16 && bus.get_ram_bank() == b.0.0
-            }).map(|f| f.0.clone());
-            if let Some(found) = search {
-                debug!("Found a RAM CodeBlock for address: {addr:#06X}.");
-                cur_block = self.ram_blocks.get_mut(&found).unwrap();
-            } else {
-                debug!("No RAM block found for address: {addr:#06X}. Creating one.");
-                let block = CodeBlock::new(addr, bus);
-                self.ram_blocks.insert((ram_bank, addr), block);
-                cur_block = self.ram_blocks.get_mut(&(ram_bank, addr)).unwrap();
-                if cur_block.dynamic {cur_block.update(bus);}
-                new_block = true;
+        let search = self.blocks.iter().find(|b| {
+            addr >= b.1.start_addr && addr < b.1.start_addr + b.1.size as u16
+        }).map(|f| f.0.clone());
+        if let Some(found) = search {
+            debug!("Found a CodeBlock for address: {addr:#06X}.");
+            cur_block = self.blocks.get_mut(&found).unwrap();
+            if cur_block.has_changes(bus) {
+                cur_block.update(bus)
             }
         } else {
-            let search = self.rom_blocks.iter().find(|b| {
-                addr >= b.1.start_addr && addr < b.1.start_addr + b.1.size as u16 && bus.get_rom_bank() == b.0.0
-            }).map(|f| f.0.clone());
-            if let Some(found) = search {
-                debug!("Found a ROM CodeBlock for address: {addr:#06X}.");
-                cur_block = self.rom_blocks.get_mut(&found).unwrap();
-            } else {
-                debug!("No ROM block found for address: {addr:#06X}. Creating one.");
-                let block = CodeBlock::new(addr, bus);
-                self.rom_blocks.insert((rom_bank, addr), block);
-                cur_block = self.rom_blocks.get_mut(&(rom_bank, addr)).unwrap();
-                new_block = true;
-            }
+            debug!("No CodeBlock found for address: {addr:#06X}. Creating one.");
+            let block = CodeBlock::new(addr, bus);
+            self.blocks.insert(addr, block);
+            cur_block = self.blocks.get_mut(&addr).unwrap();
+            new_block = true;
         }
 
         (cur_block, new_block)

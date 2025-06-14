@@ -1,9 +1,11 @@
 pub mod cartridge;
 pub mod mbc_type;
 pub mod ram;
+pub mod serial;
 
 use std::fs;
-use cartridge::*;
+use std::hash::{DefaultHasher, Hash, Hasher};
+use cartridge::{*};
 use ram::*;
 
 #[allow(unused_imports)]
@@ -12,14 +14,14 @@ use log::{debug, info, warn};
 use std::path::Path;
 
 pub struct Bus {
-    pub cartridge: Cartridge,
+    pub cartridge: AnyCartridge,
     pub ram: Ram,
-    pub ioregs: Vec<u8>,
+    pub ioregs: [u8; 0x80],
     pub boot_rom: [u8; 256],
     pub boot_enabled: bool,
 }
 
-#[derive(Debug, Copy, Clone, PartialOrd, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialOrd, PartialEq, Eq, Hash)]
 pub enum MemBlock {
     BOOT = 0,
     ROM0 = 1,
@@ -52,7 +54,7 @@ impl MemBlock {
             0xFEA0..0xFF00 => NC,
             0xFF00..0xFF80 => IOREG,
             0xFF80..0xFFFF => HRAM,
-            0xFFFF => IE
+            0xFFFF => IE,
         }
     }
 }
@@ -93,9 +95,9 @@ impl Bus {
         }
         
         Ok(Bus {
-            cartridge: Cartridge::from_file(rom_path)?,
+            cartridge: AnyCartridge::load_from_file(rom_path)?,
             ram: Ram::new(),
-            ioregs: vec![0, 0x80],
+            ioregs: [0; 0x80],
             boot_rom,
             boot_enabled
         })
@@ -150,7 +152,7 @@ impl Bus {
     #[allow(unused_variables, dead_code)]
     fn read_regs(&self, addr: u16) -> u8 {
         match addr {
-            // Temporary value to run Mooneye
+            // Temporary values to run Mooneye
             0xFF44 | 0xFF02 => 0xFF,
             _ => 0x00
         }
@@ -177,13 +179,13 @@ impl Bus {
             iter_ptr: 0x0000
         }
     }
-
-    pub fn get_rom_bank(&self) -> usize {
-        self.cartridge.cur_rom
-    }
-
-    pub fn get_ram_bank(&self) -> usize {
-        self.cartridge.cur_ram
+    
+    pub fn hash_region(&self, addr: u16, size: usize) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        for byte in self.iter_at(addr).take(size) {
+            byte.hash(&mut hasher);
+        }
+        hasher.finish()
     }
 
     pub fn is_ram(addr: u16) -> bool {

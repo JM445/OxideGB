@@ -20,6 +20,7 @@ pub enum MicroOp {
     Cpl, Daa, Ccf, Scf, Prefix,
     RetI,
     PrefetchOnly,
+    ScheduleEI,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -115,7 +116,9 @@ impl Cpu {
                 let hl = self.read16(trg);
                 self.write16(trg, hl + 1);
             },
-            RWTarget::HRAM(trg) => bus.write(0xFF00 + self.read8(trg) as u16, value as u8),
+            RWTarget::HRAM(trg) => {
+                bus.write(0xFF00 + self.read8(trg) as u16, value as u8)
+            },
             RWTarget::IME => self.ime = value > 0,
             RWTarget::Value(_) => ()
         };
@@ -230,8 +233,10 @@ impl Cpu {
             MicroOp::ReadLSBCC { .. } |
             MicroOp::CheckCC { .. }   |
             MicroOp::RetI { .. } => false,
-            MicroOp::PrefetchOnly | MicroOp::Cpl | MicroOp::Daa |
-            MicroOp::Ccf | MicroOp::Scf | MicroOp::Prefix => true,
+            MicroOp::PrefetchOnly |
+            MicroOp::Cpl | MicroOp::Daa | MicroOp::Ccf | MicroOp::Scf |
+            MicroOp::Prefix |
+            MicroOp::ScheduleEI => true,
         };
 
         match op {
@@ -289,6 +294,7 @@ impl Cpu {
             MicroOp::Prefix => {
                 self.prefix = true
             }
+            MicroOp::ScheduleEI => self.ei_next = true,
             MicroOp::PrefetchOnly => (),
         };
 

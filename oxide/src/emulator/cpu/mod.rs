@@ -44,6 +44,7 @@ pub struct Cpu {
     pub ir: u8,    // Instruction Register
     pub ir_pc: u16,// Address of current instruction
     prefix: bool,  // Was the last decoded instruction the 0xCB prefix ?
+    ei_next: bool, // Is an EI scheduled for next cycle ?
     next_ops: VecDeque<MicroOp>,
     cond_ops: VecDeque<MicroOp>,
 }
@@ -70,6 +71,7 @@ impl Cpu {
             ir: 0,
             ir_pc: 0,
             prefix: false,
+            ei_next: false,
             next_ops: VecDeque::new(),
             cond_ops: VecDeque::new()
         }
@@ -78,6 +80,10 @@ impl Cpu {
     pub fn tick<T>(&mut self, bus: &mut Bus, dbg: &mut T)
         where T: Debugger
     {
+        if self.ei_next {
+            self.ei_next = false;
+            self.ime = true;
+        }
         let res = self.next_ops.pop_front();
         match res {
             Some(op) => self.execute(op, bus, dbg),

@@ -233,7 +233,7 @@ pub fn disassemble(bytes: &[u8]) -> String {
         0xE8 => format!("ADD SP, r8"),
         0xE9 => format!("JP (HL)"),
         0xEA => format!("LD ({:#06X}), A", ((bytes.get(2).copied().unwrap_or(0) as u16) << 8 | bytes.get(1).copied().unwrap_or(0) as u16)),
-        0xEE => format!("XOR {:#04X}", bytes.get(1).copied().unwrap_or(0)),
+        0xEE => format!("XOR A, ({:#04X})", bytes.get(1).copied().unwrap_or(0)),
         0xEF => format!("RST 28H"),
         0xF0 => format!("LDH A, (0xFF{:02X})", bytes.get(1).copied().unwrap_or(0)),
         0xF1 => format!("POP AF"),

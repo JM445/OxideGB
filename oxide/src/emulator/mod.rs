@@ -31,6 +31,7 @@ impl Emulator {
     pub fn tick<T>(&mut self, dbg: &mut T)
     where T: Debugger {
         self.cpu.tick(&mut self.bus, dbg);
+        self.bus.tick_serial();
         self.ppu.tick(&mut self.bus, dbg);
     }
 }

@@ -1,12 +1,10 @@
-use crossterm::style::Attribute::Bold;
 use super::*;
-use super::parser::*;
 use log::error;
-use num_traits::Num;
 use ratatui::style::{Color, Stylize};
 use ratatui::text::Span;
 use ratatui::widgets::{Padding, Paragraph};
 
+use super::ui_utils::*;
 impl <'a> Ui<'a> {
     pub(super) fn parse_mem(&mut self, words: &[&str]) {
         if words.len() < 1 {

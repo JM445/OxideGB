@@ -22,9 +22,7 @@ impl Cpu {
     #[inline]
     pub fn decode_ei() -> VecDeque<MicroOp> {
         VecDeque::from(vec![
-            MicroOp::DataMove{
-                source: RWTarget::Value(1), dest: RWTarget::IME, prefetch: true
-            }
+            MicroOp::ScheduleEI
         ])
     }
 
