@@ -162,6 +162,81 @@ impl Cpu {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Helper function to create a new Cpu instance for testing
+    fn new_cpu() -> Cpu {
+        Cpu {
+            a: 0,
+            f: 0,
+            b: 0,
+            c: 0,
+            d: 0,
+            e: 0,
+            h: 0,
+            l: 0,
+            w: 0,
+            z: 0,
+            sp: 0,
+            pc: 0,
+            ime: false,
+            // The following fields are not part of the main Cpu struct
+            // halted: false,
+            // cycle_count: 0,
+            // serial_out: None,
+            // TODO: Initialize other Cpu fields if necessary for tests
+            ir: 0,
+            ir_pc: 0,
+            prefix: false,
+            ei_next: false,
+            next_ops: Default::default(),
+            cond_ops: Default::default(),
+        }
+    }
+
+    #[test]
+    fn test_set_get_flag() {
+        let mut cpu = new_cpu();
+
+        // Test setting and getting individual flags
+        cpu.set_flag(Flag::Z, 1);
+        assert_eq!(cpu.get_flag(Flag::Z), 1);
+        cpu.set_flag(Flag::N, 1);
+        assert_eq!(cpu.get_flag(Flag::N), 1);
+        cpu.set_flag(Flag::H, 1);
+        assert_eq!(cpu.get_flag(Flag::H), 1);
+        cpu.set_flag(Flag::C, 1);
+        assert_eq!(cpu.get_flag(Flag::C), 1);
+
+        // Test setting flags to 0
+        cpu.set_flag(Flag::Z, 0);
+        assert_eq!(cpu.get_flag(Flag::Z), 0);
+
+        // Test that other flags are not affected
+        assert_eq!(cpu.get_flag(Flag::N), 1);
+        assert_eq!(cpu.get_flag(Flag::H), 1);
+        assert_eq!(cpu.get_flag(Flag::C), 1);
+
+        // Test setting multiple flags
+        cpu.set_flag(Flag::Z, 1);
+        cpu.set_flag(Flag::N, 0);
+        cpu.set_flag(Flag::H, 1);
+        cpu.set_flag(Flag::C, 0);
+        assert_eq!(cpu.get_flag(Flag::Z), 1);
+        assert_eq!(cpu.get_flag(Flag::N), 0);
+        assert_eq!(cpu.get_flag(Flag::H), 1);
+        assert_eq!(cpu.get_flag(Flag::C), 0);
+
+        // Test that set_flag handles values other than 0 or 1
+        cpu.set_flag(Flag::Z, 100); // Should be treated as 0 (100 & 1 = 0)
+        assert_eq!(cpu.get_flag(Flag::Z), 0);
+        cpu.set_flag(Flag::N, 3); // Should be treated as 1 (3 & 1 = 1)
+        assert_eq!(cpu.get_flag(Flag::N), 1);
+    }
+}
+
 impl RegAccess<Reg8> for Cpu {
     type Value = u8;
 
