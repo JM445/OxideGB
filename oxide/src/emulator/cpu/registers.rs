@@ -185,3 +185,7 @@ impl RegAccess<Reg16> for Cpu {
         self.write16(r, value);
     }
 }
+
+#[cfg(test)]
+#[path = "tests/registers.rs"]
+mod registers_tests;
