@@ -1,3 +1,7 @@
+#[cfg(test)]
+#[path = "tests/micro_ops.rs"]
+mod micro_ops_tests;
+
 #[allow(unused_imports)]
 use log::{debug, info, warn, error};
 
@@ -6,6 +10,7 @@ use crate::emulator::memory::Bus;
 use super::*;
 
 use std::num::Wrapping;
+
 
 #[derive(Debug, Copy, Clone)]
 pub enum MicroOp {
