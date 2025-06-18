@@ -150,8 +150,8 @@ impl Cpu {
         (res.0,
         (((res.0 & 0xFF) == 0) as u8) << 3 | // Z
         0b0000 |                             // N
-        (((xor & 0x10)  != 0) as u8) << 2 |  // H
-        (((xor & 0x100) != 0) as u8) << 3)   // C
+        (((xor & 0x10)  != 0) as u8) << 1 |  // H
+        (((xor & 0x100) != 0) as u8))        // C
     }
 
     fn alu_sub(left: Wrapping<u16>, right: Wrapping<u16>, carry: Wrapping<u16>) -> (u16, u8) {
