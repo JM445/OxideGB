@@ -146,12 +146,13 @@ impl Cpu {
 
     fn alu_add(left: Wrapping<u16>, right: Wrapping<u16>, carry: Wrapping<u16>) -> (u16, u8) {
         let res = left + right + carry;
-        let xor = (left ^ right ^ carry).0;
+        let h = ((left.0 & 0xF) + (right.0 & 0xF) + carry.0) >= 0x10;
+        let c = res.0 >= 0x100;
         (res.0,
         (((res.0 & 0xFF) == 0) as u8) << 3 | // Z
         0b0000 |                             // N
-        (((xor & 0x10)  != 0) as u8) << 1 |  // H
-        (((xor & 0x100) != 0) as u8))        // C
+        ((h as u8) << 1) |                   // H
+        (c as u8))                           // C
     }
 
     fn alu_sub(left: Wrapping<u16>, right: Wrapping<u16>, carry: Wrapping<u16>) -> (u16, u8) {
@@ -161,25 +162,25 @@ impl Cpu {
         (res.0,
         ((((res.0 & 0xFF) == 0) as u8) << 3) |              // Z
         0b0100 |                                            // N
-        (((left.0 & 0xF) < (borrow.0 & 0xF)) as u8) << 2 |  // H
-        (((left.0 & 0xFF) < (borrow.0 & 0xFF)) as u8)) // C
+        (((left.0 & 0xF) < (borrow.0 & 0xF)) as u8) << 1 |  // H
+        (((left.0 & 0xFF) < (borrow.0 & 0xFF)) as u8))      // C
     }
 
     fn alu_and(left: Wrapping<u16>, right: Wrapping<u16>) -> (u16, u8) {
         let res = left & right;
-        let z   = (left.0 & 0xFF) == 0;
+        let z   = (res.0 & 0xFF) == 0;
         (res.0, (((z as u8) << 3) | 2))
     }
 
     fn alu_or(left: Wrapping<u16>, right: Wrapping<u16>) -> (u16, u8) {
         let res = left | right;
-        let z   = (left.0 & 0xFF) == 0;
+        let z   = (res.0 & 0xFF) == 0;
         (res.0, ((z as u8) << 3))
     }
 
     fn alu_xor(left: Wrapping<u16>, right: Wrapping<u16>) -> (u16, u8) {
         let res = left ^ right;
-        let z   = (left.0 & 0xFF) == 0;
+        let z   = (res.0 & 0xFF) == 0;
 
         (res.0, ((z as u8) << 3))
     }
