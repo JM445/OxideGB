@@ -1,8 +1,8 @@
-use std::collections::VecDeque;
-use crate::emulator::memory::*;
-use crate::emulator::cpu::*;
-use crate::emulator::ppu::*;
 use crate::emulator::cpu::registers::*;
+use crate::emulator::cpu::*;
+use crate::emulator::memory::*;
+use crate::emulator::ppu::*;
+use std::collections::VecDeque;
 
 use super::*;
 

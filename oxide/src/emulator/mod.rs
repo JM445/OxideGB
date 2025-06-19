@@ -3,9 +3,9 @@ pub mod ppu;
 
 pub mod cpu;
 
+use cpu::*;
 use memory::*;
 use ppu::*;
-use cpu::*;
 
 use crate::debugger::*;
 

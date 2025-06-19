@@ -1,10 +1,10 @@
 pub mod opcodes;
 
-use std::collections::{HashMap, HashSet};
-use log::debug;
-use opcodes::*;
 use crate::emulator::cpu::Cpu;
 use crate::emulator::memory::{Bus, MemBlock};
+use log::debug;
+use opcodes::*;
+use std::collections::{HashMap, HashSet};
 
 
 /*
@@ -134,7 +134,7 @@ impl CodeBlock {
 }
 
 impl CodeMap {
-    pub fn new(starting_addr: u16) -> Self {
+    pub fn new() -> Self {
         Self {
             blocks: HashMap::new(),
         }

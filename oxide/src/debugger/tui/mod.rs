@@ -5,28 +5,24 @@ mod parser;
 mod mem_view;
 mod lexer;
 
-use crate::emulator::*;
-use super::*;
 use super::full_debugger::*;
+use super::*;
+use crate::emulator::*;
 
-use render::*;
-use parser::*;
-
-use std::{fmt, io};
 use std::collections::VecDeque;
-use std::time::Duration;
 use std::path::Path;
+use std::io;
 
 use ratatui::{
-    widgets::{Block, Borders},
-    text::{Line},
-    style::{Style},
     crossterm::event,
-    crossterm::event::{KeyEvent, Event, KeyCode}
+    crossterm::event::{Event, KeyCode},
+    style::Style,
+    text::Line,
+    widgets::{Block, Borders}
 };
 
-use tui_textarea::{TextArea, Input};
-use crate::debugger::dissassembler::{CodeBlock, CodeMap};
+use crate::debugger::dissassembler::CodeMap;
+use tui_textarea::{Input, TextArea};
 
 pub struct Ui<'a> {
     exit: bool,
@@ -39,7 +35,7 @@ pub struct Ui<'a> {
 }
 
 impl<'a> Ui<'a> {
-    pub fn new(emu: Emulator, dbg: FullDebugger, starting_pc: u16) -> Ui<'a> {
+    pub fn new(emu: Emulator, dbg: FullDebugger) -> Ui<'a> {
         let mut textarea = TextArea::default();
 
         textarea.set_cursor_line_style(Style::default());
@@ -55,7 +51,7 @@ impl<'a> Ui<'a> {
             cmd_area: textarea,
             debugger: dbg,
             last_cmd: None,
-            code_map: CodeMap::new(starting_pc),
+            code_map: CodeMap::new(),
         }
     }
 
@@ -111,8 +107,7 @@ impl<'a> Ui<'a> {
 pub fn tui_main<P: AsRef<Path>>(rom_path: P, boot_path: P) -> Result<(), String> {
     let emu = Emulator::new(rom_path, boot_path)?;
     let dbg =  FullDebugger::new(emu.cpu.pc);
-    let pc = emu.cpu.pc;
-    let mut ui = Ui::new(emu, dbg, pc);
+    let mut ui = Ui::new(emu, dbg);
 
     if let Ok(_) = ui.run() {
         Ok(())

@@ -1,10 +1,10 @@
 #[allow(unused_imports)]
-use log::{debug, info, warn, error};
+use log::{debug, error, info, warn};
 
 use super::*;
 
-use std::collections::VecDeque;
 use crate::emulator::cpu::micro_ops::ShiftType::*;
+use std::collections::VecDeque;
 /*
  * CPU Instruction decoder.
  * Each instruction is converted to a deque of micro operations (see micro_ops.rs)
@@ -291,8 +291,6 @@ impl Cpu {
             0xFD => Self::decode_invalid(0xFD),
             0xFE => Self::decode_cp_imm(Reg8::A),
             0xFF => Self::decode_rst(0x38),
-            
-            _ => panic!("Unreachable")
         }
     }
 

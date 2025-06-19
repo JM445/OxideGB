@@ -30,8 +30,9 @@ impl Mbc for Mbc1 {
                 ram[addr as usize - 0xA000]
             },
             (0xA000..0xC000, true, true) => {
+                if !self.ram_enable { return 0xFF }
                 let bank = self.ram_bank & 0b11;
-                ram[addr as usize - 0xA000 + 0x2000 * bank as usize]
+                ram[(addr as usize - 0xA000) + 0x2000 * bank as usize]
             }
             (_, _, _) => panic!("Should be unreachable"),
         }
@@ -51,6 +52,12 @@ impl Mbc for Mbc1 {
                 self.ram_count = value as usize;
             },
             0x6000..0x8000 => self.bank_mode = (value & 1) != 0,
+            0xA000..0xC000 => {
+                if self.ram_enable {
+                    let bank = self.ram_bank & 0b11;
+                    ram[(addr as usize - 0xA000) + 0x2000 * bank as usize] = value;
+                }
+            }
             _ => ()
         }
     }

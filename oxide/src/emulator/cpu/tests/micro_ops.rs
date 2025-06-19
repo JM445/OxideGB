@@ -2,7 +2,7 @@
 #[cfg(test)]
 mod tests {
     use crate::emulator::cpu::*;
-    
+
     use std::num::Wrapping;
     #[test]
     fn test_alu_add() {

@@ -50,7 +50,7 @@ impl <'a> Ui<'a> {
     }
 
     // A line is 54 chars
-    pub (super) fn draw_memory(&self, height: u16) -> Paragraph{
+    pub (super) fn draw_memory(&self, _height: u16) -> Paragraph{
         let mut res : Vec<Line> = Vec::new();
 
         for (addr, size) in &self.memory_watches {

@@ -2,7 +2,7 @@
 // This file is included by oxide/src/emulator/cpu/registers.rs
 
 mod tests {
-    use crate::emulator::cpu::{Cpu, Reg8, Reg16, Flag};
+    use crate::emulator::cpu::{Cpu, Flag, Reg16, Reg8};
 
     // Helper function to initialize a CPU instance with default values for tests
     fn init_cpu() -> Cpu {

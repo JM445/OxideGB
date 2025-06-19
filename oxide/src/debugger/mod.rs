@@ -5,16 +5,14 @@ pub mod dissassembler;
 
 use full_debugger::*;
 
-use crate::emulator::memory::*;
-use crate::emulator::cpu::*;
 use crate::emulator::cpu::micro_ops::*;
 use crate::emulator::cpu::registers::*;
+use crate::emulator::cpu::*;
+use crate::emulator::memory::*;
 use crate::emulator::ppu::*;
 
-use super::*;
-
 #[allow(unused_imports)]
-use log::{debug, info, warn, error};
+use log::{debug, error, info, warn};
 
 pub trait Debugger {
     fn on_cpu_event(&mut self, event: DebugEvent, cpu: &Cpu, bus: &Bus);

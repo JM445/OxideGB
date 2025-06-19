@@ -9,19 +9,17 @@ mod inline_jump_decoder;
 mod inline_misc_decoder;
 mod inline_binop_decoder;
 
-use registers::*;
 use micro_ops::*;
-use decoder::*;
-use displays::*;
+use registers::*;
 
-use crate::emulator::memory::Bus;
 use crate::debugger::DebugEvent;
 use crate::debugger::Debugger;
+use crate::emulator::memory::Bus;
 
 use std::collections::VecDeque;
 
 #[allow(unused_imports)]
-use log::{debug, info, warn, error};
+use log::{debug, error, info, warn};
 
 #[derive(Debug)]
 pub struct Cpu {

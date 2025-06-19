@@ -1,11 +1,10 @@
 pub mod mbc1;
 mod no_mbc;
 
+use crate::emulator::memory::cartridge::no_mbc::NoMbc;
+use mbc1::*;
 use std::fs;
 use std::path::Path;
-use mbc1::*;
-use crate::emulator::memory::cartridge::no_mbc::NoMbc;
-use crate::emulator::memory::mbc_type::MbcKind;
 
 pub trait Mbc {
     fn read(&self, rom: &[u8], ram: &[u8], addr: u16) -> u8;
@@ -19,7 +18,7 @@ pub struct Cartridge<M: Mbc> {
 }
 
 pub enum AnyCartridge {
-    NO_MBC(Cartridge<NoMbc>),
+    NoMbc(Cartridge<NoMbc>),
     MBC1(Cartridge<Mbc1>),
 }
 
@@ -36,14 +35,14 @@ impl<M: Mbc> Cartridge<M> {
 impl AnyCartridge {
     pub fn read(&self, addr: u16) -> u8 {
         match self {
-            AnyCartridge::NO_MBC(cart) => cart.read(addr),
+            AnyCartridge::NoMbc(cart) => cart.read(addr),
             AnyCartridge::MBC1(cart) => cart.read(addr),
         }
     }
     
     pub fn write(&mut self, addr: u16, value: u8) -> () {
         match self {
-            AnyCartridge::NO_MBC(cart) => cart.write(addr, value),
+            AnyCartridge::NoMbc(cart) => cart.write(addr, value),
             AnyCartridge::MBC1(cart) => cart.write(addr, value),
         }
     }
@@ -64,7 +63,7 @@ impl AnyCartridge {
         match mbc_val {
             0x00 | 0x08 | 0x09 => {
                 let mbc = NoMbc{};
-                Ok(AnyCartridge::NO_MBC(Cartridge { mbc, rom, ram }))
+                Ok(AnyCartridge::NoMbc(Cartridge { mbc, rom, ram }))
             },
             0x01 | 0x02 | 0x03 => {
                 let mbc = Mbc1::new(rom.len() / 0x4000, ram.len() / 0x2000);

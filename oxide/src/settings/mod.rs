@@ -1,6 +1,5 @@
-
-use std::sync::{Arc, Mutex, LazyLock};
 use once_cell::sync::OnceCell;
+use std::sync::Arc;
 
 pub static GLOB_SETTINGS : OnceCell<Arc<Settings>> = OnceCell::new();
 

@@ -1,15 +1,8 @@
 use crate::debugger::full_debugger::*;
 
-use super::mem_view::*;
-
-use log::{debug};
-use super::*;
 use super::ui_utils::*;
-
-use std::str::FromStr;
-use num_traits::{Num, PrimInt};
-
-
+use super::*;
+use log::debug;
 
 impl<'a> Ui<'a> {
     pub (super) fn parse_line(&mut self, line: &str) {

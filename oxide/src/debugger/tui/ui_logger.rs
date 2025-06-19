@@ -1,7 +1,6 @@
+use log::{Level, LevelFilter, Metadata, Record};
 use std::collections::VecDeque;
-use std::sync::{Arc, Mutex, LazyLock};
-use log::{Level, LevelFilter, Metadata, Record, Log};
-use std::any::Any;
+use std::sync::{Arc, LazyLock, Mutex};
 
 #[derive(Clone, Debug)]
 pub struct LogEntry {

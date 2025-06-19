@@ -1,12 +1,11 @@
 pub mod cartridge;
-pub mod mbc_type;
 pub mod ram;
 pub mod serial;
 
+use cartridge::*;
+use ram::*;
 use std::fs;
 use std::hash::{DefaultHasher, Hash, Hasher};
-use cartridge::{*};
-use ram::*;
 
 #[allow(unused_imports)]
 use log::{debug, info, warn};

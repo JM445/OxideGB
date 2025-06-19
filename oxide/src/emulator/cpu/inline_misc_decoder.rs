@@ -1,6 +1,6 @@
 use super::*;
 
-use log::{error};
+use log::error;
 
 impl Cpu {
     #[inline]
@@ -75,7 +75,7 @@ impl Cpu {
     
     #[inline]
     pub fn decode_invalid(opcode: u8) -> VecDeque<MicroOp> {
-        error!("Error: Decoded an invalid opcode. Using NOOP instead.");
+        error!("Error: Decoded an invalid opcode: {opcode:#04X}. Using NOOP instead.");
         VecDeque::from(vec![
             MicroOp::PrefetchOnly
         ])

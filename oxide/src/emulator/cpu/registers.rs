@@ -4,13 +4,6 @@ mod registers_tests;
 
 use super::Cpu;
 
-trait RegAccess<R> {
-    type Value;
-
-    fn read(&self, reg: R) -> Self::Value;
-    fn write(&mut self, reg: R, value: Self::Value);
-}
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Reg8 {
     A = 0,
@@ -163,29 +156,5 @@ impl Cpu {
                 self.z = value as u8;
             },
         };
-    }
-}
-
-impl RegAccess<Reg8> for Cpu {
-    type Value = u8;
-
-    fn read(&self, r: Reg8) -> u8 {
-        self.read8(r)
-    }
-
-    fn write(&mut self, r: Reg8, value: u8) {
-        self.write8(r, value);
-    }
-}
-
-impl RegAccess<Reg16> for Cpu {
-    type Value = u16;
-
-    fn read(&self, r: Reg16) -> u16 {
-        self.read16(r)
-    }
-
-    fn write(&mut self, r: Reg16, value: u16) {
-        self.write16(r, value);
     }
 }

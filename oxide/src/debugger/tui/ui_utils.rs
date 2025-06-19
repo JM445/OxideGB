@@ -1,10 +1,10 @@
-use std::str::FromStr;
 use log::error;
 use num_traits::{Num, PrimInt};
 use ratatui::{
-    layout::{Rect},
+    layout::Rect,
     text::Line
 };
+use std::str::FromStr;
 
 use super::ui_logger::LogEntry;
 

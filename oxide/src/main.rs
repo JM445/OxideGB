@@ -2,15 +2,15 @@ pub mod emulator;
 pub mod debugger;
 mod settings;
 
-use crate::emulator::*;
-use crate::debugger::{*, full_debugger::*};
 use crate::debugger::tui::ui_logger::UiLogger;
+use crate::debugger::{*};
+use crate::emulator::*;
 
-use std::fmt;
-use std::sync::Arc;
 use clap::{Parser, ValueEnum};
 use debugger::tui::tui_main;
 use debugger::DummyDebugger;
+use std::fmt;
+use std::sync::Arc;
 
 use self::settings::*;
 

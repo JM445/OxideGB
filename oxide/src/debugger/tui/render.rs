@@ -1,21 +1,17 @@
-use super::Ui;
-use super::dissassembler::*;
 use super::dissassembler::opcodes::*;
-use super::ui_utils::*;
 use super::ui_logger::*;
+use super::ui_utils::*;
+use super::Ui;
 use crate::emulator::cpu::registers::*;
-use super::mem_view::*;
 
 use ratatui::{
-    layout::{Constraint, Direction, Layout, Alignment},
-    widgets::{Block, Borders, Paragraph, Padding, Table, Row, Cell, Wrap},
-    text::{Line, Span, Text},
+    layout::{Alignment, Constraint, Direction, Layout},
+    style::{Color, Style, Stylize},
+    text::{Line, Span},
+    widgets::{Block, Borders, Padding, Paragraph, Wrap},
     Frame,
-    style::{Color, Modifier, Style, Stylize},
 };
-use std::sync::{Arc};
-
-use log::debug;
+use std::sync::Arc;
 
 impl<'a> Ui<'a> {
     pub(super) fn draw(&mut self, frame: &mut Frame) {
@@ -75,7 +71,6 @@ impl<'a> Ui<'a> {
         let mut lines = Vec::new();
         let addr = self.emulator.cpu.ir_pc;
         let (block, _) = self.code_map.get_block(&self.emulator.bus, &self.emulator.cpu);
-        let new_block = addr == block.start_addr;
 
         // Map the previously executed instructions to a list of lines
         let mut padded_prev = self.debugger.last_instructions.iter()
