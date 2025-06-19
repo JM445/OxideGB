@@ -6,7 +6,7 @@ mod tests {
 
     // Helper function to initialize a CPU instance with default values for tests
     fn init_cpu() -> Cpu {
-        Cpu::new(0) // Assuming Cpu::default() or similar exists and is appropriate
+        Cpu::new_noboot() // Assuming Cpu::default() or similar exists and is appropriate
     }
 
     // Tests will be added here in subsequent steps.

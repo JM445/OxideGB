@@ -34,7 +34,7 @@ macro_rules! emu_print {
 #[derive(Parser)]
 #[command(version, about, name = "OxideGB")]
 struct Cli {
-    /// Which debugger to use.
+    /// Which debugger to use
     #[arg(short, long, default_value_t = DebugMode::None)]
     debug: DebugMode,
 
@@ -42,8 +42,13 @@ struct Cli {
     #[arg(short, long, default_value_t = String::new())]
     boot: String,
     
+    /// If enabled, then the content of serial data register is printed when modified
     #[arg(short = 'p', long)]
     serial_print: bool,
+    
+    /// If enabled, then a log is printed each tick with GameBoy Doctor format
+    #[arg(long = "doctor")]
+    doctor_log: bool,
 
     /// Path of the GB ROM to load
     rom_path: String,
@@ -82,6 +87,7 @@ fn set_settings(cli: &Cli) {
     GLOB_SETTINGS.set(Arc::new(Settings {
         print_serial: cli.serial_print,
         tui_enabled,
+        doctor_logs: cli.doctor_log
     })).expect("Settings already initialized !");
 }
 

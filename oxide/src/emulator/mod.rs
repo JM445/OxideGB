@@ -21,8 +21,14 @@ pub struct Emulator {
 impl Emulator {
     pub fn new<P: AsRef<Path>>(rom_path: P, boot_path: P) -> Result<Self, String> {
         let bus = Bus::new(rom_path, boot_path)?;
+        let cpu = if bus.boot_enabled {
+            Cpu::new_boot()
+        } else {
+            Cpu::new_noboot()
+        };
+        
         Ok(Emulator{
-            cpu: Cpu::new(if bus.boot_enabled {0x0000} else {0x0100}),
+            cpu,
             bus,
             ppu: Default::default(),
         })

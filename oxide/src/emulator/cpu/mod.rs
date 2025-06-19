@@ -20,6 +20,8 @@ use std::collections::VecDeque;
 
 #[allow(unused_imports)]
 use log::{debug, error, info, warn};
+use crate::emu_print;
+use crate::settings::GLOB_SETTINGS;
 
 #[derive(Debug)]
 pub struct Cpu {
@@ -48,7 +50,34 @@ pub struct Cpu {
 }
 
 impl Cpu {
-    pub fn new(initial_pc: u16) -> Cpu {
+    
+    pub fn new_noboot() -> Self {
+        Cpu {
+            a: 0x01,
+            f: 0xB0,
+            b: 0x00,
+            c: 0x13,
+            d: 0x00,
+            e: 0xD8,
+            h: 0x01,
+            l: 0x4D,
+
+            w: 0,
+            z: 0,
+
+            sp: 0xFFFE,
+            pc: 0x0100,
+
+            ime: false,
+            ir: 0,
+            ir_pc: 0,
+            prefix: false,
+            ei_next: false,
+            next_ops: VecDeque::new(),
+            cond_ops: VecDeque::new()
+        }
+    }
+    pub fn new_boot() -> Self {
         Cpu {
             a: 0,
             f: 0,
@@ -63,7 +92,7 @@ impl Cpu {
             z: 0,
 
             sp: 0,
-            pc: initial_pc,
+            pc: 0x0000,
 
             ime: false,
             ir: 0,
@@ -73,6 +102,18 @@ impl Cpu {
             next_ops: VecDeque::new(),
             cond_ops: VecDeque::new()
         }
+    }
+    
+    // Returns a log String formated for GameBoy Doctor
+    // Format: A:00 F:11 B:22 C:33 D:44 E:55 H:66 L:77 SP:8888 PC:9999 PCMEM:AA,BB,CC,DD
+    pub fn get_doctor_log(&self, bus: &Bus) -> String {
+        format!("A:{:02X} F:{:02X} B:{:02X} C:{:02X} D:{:02X} E:{:02X} H:{:02X} L:{:02X} SP:{:04X} PC:{:04X} PCMEM:{:02X},{:02X},{:02X},{:02X}\n",
+            self.a, self.f, self.b, self.c, 
+            self.d, self.e, self.h, self.l,
+            self.sp, self.pc, 
+            bus.read(self.pc), bus.read(self.pc + 1),
+            bus.read(self.pc + 2), bus.read(self.pc + 3)
+        )
     }
 
     pub fn tick<T>(&mut self, bus: &mut Bus, dbg: &mut T)
@@ -84,8 +125,19 @@ impl Cpu {
         }
         let res = self.next_ops.pop_front();
         match res {
+            Some(MicroOp::PrefetchOnly) => {
+                if GLOB_SETTINGS.get().unwrap().doctor_logs {
+                    emu_print!("{}", self.get_doctor_log(bus))
+                }
+                self.execute(MicroOp::PrefetchOnly, bus, dbg);
+            }
             Some(op) => self.execute(op, bus, dbg),
-            None => self.execute_prefetch(bus)
+            None => {
+                if GLOB_SETTINGS.get().unwrap().doctor_logs {
+                    emu_print!("{}", self.get_doctor_log(bus))
+                }
+                self.execute_prefetch(bus)
+            }
         };
     }
 }

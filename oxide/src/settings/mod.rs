@@ -7,4 +7,5 @@ pub static GLOB_SETTINGS : OnceCell<Arc<Settings>> = OnceCell::new();
 pub struct Settings {
     pub print_serial: bool,
     pub tui_enabled: bool,
+    pub doctor_logs: bool,
 }

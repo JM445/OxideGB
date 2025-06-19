@@ -151,8 +151,8 @@ impl Bus {
     #[allow(unused_variables, dead_code)]
     fn read_regs(&self, addr: u16) -> u8 {
         match addr {
-            // Temporary values to run Mooneye
-            0xFF44 | 0xFF02 => 0xFF,
+            0xFF44 | 0xFF02 => 0xFF, // Temporary values to run Mooneye
+            0xFF00..0xFF80 => self.ioregs[addr as usize - 0xFF00],
             _ => 0x00
         }
     }
@@ -161,6 +161,7 @@ impl Bus {
     fn write_regs(&mut self, addr: u16, value: u8) {
         match addr {
             0xFF50 => self.boot_enabled = false,
+            0xFF00..0xFF80 => self.ioregs[addr as usize - 0xFF00] = value,
             _ => ()
         }
     }
