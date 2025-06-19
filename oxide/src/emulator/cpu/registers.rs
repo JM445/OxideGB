@@ -1,3 +1,7 @@
+#[cfg(test)]
+#[path = "tests/registers.rs"]
+mod registers_tests;
+
 use super::Cpu;
 
 trait RegAccess<R> {
@@ -7,7 +11,7 @@ trait RegAccess<R> {
     fn write(&mut self, reg: R, value: Self::Value);
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Reg8 {
     A = 0,
     F,
@@ -25,7 +29,7 @@ pub enum Reg8 {
     SPL
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Reg16 {
     BC = 0,
     DE,
@@ -87,7 +91,7 @@ impl Cpu {
     pub fn read8(&self, r: Reg8) -> u8 {
         match r {
             Reg8::A => self.a,
-            Reg8::F => self.f,
+            Reg8::F => self.f & 0xF0,
             Reg8::B => self.b,
             Reg8::C => self.c,
             Reg8::D => self.d,
@@ -105,8 +109,8 @@ impl Cpu {
 
     pub fn read16(&self, r: Reg16) -> u16 {
         match r {
-            Reg16::AF => ((self.a as u16) << 8) | (self.f as u16),
-            Reg16::BC => ((self.b as u16) << 8) | (self.b as u16),
+            Reg16::AF => ((self.a as u16) << 8) | ((self.f & 0xF0) as u16),
+            Reg16::BC => ((self.b as u16) << 8) | (self.c as u16),
             Reg16::DE => ((self.d as u16) << 8) | (self.e as u16),
             Reg16::HL => ((self.h as u16) << 8) | (self.l as u16),
             Reg16::SP => self.sp,
@@ -118,7 +122,7 @@ impl Cpu {
     pub fn write8(&mut self, r: Reg8, value: u8) {
         match r {
             Reg8::A => self.a = value,
-            Reg8::F => self.f = value,
+            Reg8::F => self.f = value & 0xF0,
             Reg8::B => self.b = value,
             Reg8::C => self.c = value,
             Reg8::D => self.d = value,
@@ -185,7 +189,3 @@ impl RegAccess<Reg16> for Cpu {
         self.write16(r, value);
     }
 }
-
-#[cfg(test)]
-#[path = "tests/registers.rs"]
-mod registers_tests;

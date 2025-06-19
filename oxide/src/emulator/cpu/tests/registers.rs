@@ -1,15 +1,12 @@
 // oxide/src/emulator/cpu/tests/registers.rs
 // This file is included by oxide/src/emulator/cpu/registers.rs
 
-// The #[cfg(test)] attribute on the including module in registers.rs
-// will ensure this code is only compiled for tests.
-
 mod tests {
     use crate::emulator::cpu::{Cpu, Reg8, Reg16, Flag};
 
     // Helper function to initialize a CPU instance with default values for tests
     fn init_cpu() -> Cpu {
-        Cpu::default() // Assuming Cpu::default() or similar exists and is appropriate
+        Cpu::new(0) // Assuming Cpu::default() or similar exists and is appropriate
     }
 
     // Tests will be added here in subsequent steps.
