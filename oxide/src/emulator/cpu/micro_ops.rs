@@ -147,7 +147,7 @@ impl Cpu {
     fn alu_add(left: Wrapping<u16>, right: Wrapping<u16>, carry: Wrapping<u16>) -> (u16, u8) {
         let res = left + right + carry;
         let h = ((left.0 & 0xF) + (right.0 & 0xF) + carry.0) >= 0x10;
-        let c = res.0 >= 0x100;
+        let c = ((left.0 & 0xFF) + (right.0 & 0xFF) + carry.0) >= 0x100;
         (res.0,
         (((res.0 & 0xFF) == 0) as u8) << 3 | // Z
         0b0000 |                             // N
@@ -395,7 +395,7 @@ impl Cpu {
                 let signed = Wrapping(rval.0 as u8 as i8 as i16 as u16);
                 let (res, flags) = Self::alu_add(lval, signed, Wrapping(0));
                 self.set_target(dest, res, bus);
-                self.set_flags(flags, mask);
+                self.set_flags(flags & 0b0011, mask);
             }
 
             /****** Logic ******/

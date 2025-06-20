@@ -330,14 +330,12 @@ impl Cpu {
         VecDeque::from(vec![
             MicroOp::ReadIMM {prefetch: false},
             MicroOp::Operation {ope: Operation::Ads {
-                left: RWTarget::Reg8(Reg8::SPL), right: RWTarget::Reg8(Reg8::Z),
-                dest: RWTarget::Reg8(Reg8::Z), mask: 0b1111
+                left: RWTarget::Reg16(Reg16::SP), right: RWTarget::Reg8(Reg8::Z),
+                dest: RWTarget::Reg16(Reg16::WZ), mask: 0b1111
             }, prefetch: false},
-            MicroOp::Operation {ope: Operation::Adc{
-                left: RWTarget::Reg8(Reg8::SPH), right: RWTarget::Value(0),
-                dest: RWTarget::Reg8(Reg8::W), mask: 0b0000
-            }, prefetch: false},
-            MicroOp::DataMove {source: RWTarget::Reg16(Reg16::WZ), dest: RWTarget::Reg16(Reg16::SP), prefetch: true}
+            MicroOp::DataMove {
+                source: RWTarget::Reg16(Reg16::WZ), dest: RWTarget::Reg16(Reg16::SP), prefetch: false},
+            MicroOp::PrefetchOnly
         ])
     }
 

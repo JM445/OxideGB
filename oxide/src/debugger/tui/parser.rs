@@ -63,6 +63,13 @@ impl<'a> Ui<'a> {
                     true
                 } else {false}
             },
+            "mem" | "m" => {
+                if let (Ok(a), Ok(v)) = (parse_hex_or_dec(words[1]), parse_hex_or_dec(words[2])) {
+                    self.debugger.add_breakpoint(Breakpoint::MemValue(a, v));
+                    debug!{"Added a breakpoint when [{a:#06X}] = {v:#04X}"};
+                    true
+                } else {false}  
+            },
             _ => {
                 error!("Error: Unknown break type: {}", words[0]);
                 false

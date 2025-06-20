@@ -100,14 +100,12 @@ impl Cpu {
     pub fn decode_ld_hl_sp_e8() -> VecDeque<MicroOp> {
         VecDeque::from(vec![
             MicroOp::ReadIMM{prefetch: false},
-            MicroOp::Operation { ope: Operation::Add {
-                left: RWTarget::Reg8(Reg8::SPL), right: RWTarget::Reg8(Reg8::Z),
-                dest: RWTarget::Reg8(Reg8::L), mask: 0b1111
+            MicroOp::Operation { ope: Operation::Ads {
+                left: RWTarget::Reg16(Reg16::SP), right: RWTarget::Reg8(Reg8::Z),
+                dest: RWTarget::Reg16(Reg16::WZ), mask: 0b1111
             } , prefetch: false },
-            MicroOp::Operation { ope: Operation::Adc {
-                left: RWTarget::Reg8(Reg8::SPH), right: RWTarget::Value(0),
-                dest: RWTarget::Reg8(Reg8::H), mask: 0b1111
-            }, prefetch: true },
+            MicroOp::DataMove {
+                source: RWTarget::Reg16(Reg16::WZ), dest: RWTarget::Reg16(Reg16::HL), prefetch: true },
         ])
     }
 

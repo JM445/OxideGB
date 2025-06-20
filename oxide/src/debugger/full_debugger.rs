@@ -23,7 +23,8 @@ pub enum Breakpoint {
     Address(u16),
     Instructions(usize),
     Register8Value(Reg8, u8),
-    Register16Value(Reg16, u16)
+    Register16Value(Reg16, u16),
+    MemValue(u16, u8)
 }
 
 impl Debugger for FullDebugger {
@@ -77,6 +78,7 @@ impl FullDebugger {
                 Breakpoint::Address(a) => if &cpu.pc == a {true} else {false},
                 Breakpoint::Register8Value(r, v) => if cpu.read8(*r) == *v {true} else {false},
                 Breakpoint::Register16Value(r, v) => if cpu.read16(*r) == *v {true} else {false},
+                Breakpoint::MemValue(a, v) => if bus.read(*a) == *v {true} else {false},
             };
 
             if res {
