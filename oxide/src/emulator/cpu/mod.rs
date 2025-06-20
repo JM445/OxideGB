@@ -125,17 +125,8 @@ impl Cpu {
         }
         let res = self.next_ops.pop_front();
         match res {
-            Some(MicroOp::PrefetchOnly) => {
-                if GLOB_SETTINGS.get().unwrap().doctor_logs {
-                    emu_print!("{}", self.get_doctor_log(bus))
-                }
-                self.execute(MicroOp::PrefetchOnly, bus, dbg);
-            }
             Some(op) => self.execute(op, bus, dbg),
             None => {
-                if GLOB_SETTINGS.get().unwrap().doctor_logs {
-                    emu_print!("{}", self.get_doctor_log(bus))
-                }
                 self.execute_prefetch(bus)
             }
         };

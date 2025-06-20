@@ -28,7 +28,7 @@ pub enum MicroOp {
     ScheduleEI,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum RWTarget {
     Reg8(Reg8),
     Reg16(Reg16),
@@ -74,7 +74,7 @@ pub enum Operation {
     Rsb {source: RWTarget, dest: RWTarget, bit: u8, value: u8},
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum ShiftType {
     R,  // RR / RL
     RC, // RRC / RLC
@@ -280,6 +280,7 @@ impl Cpu {
                 let c = self.get_flag(Flag::C);
                 let n = self.get_flag(Flag::N);
                 let mut offset = 0;
+                let mut carry = false;
                 let res;
 
                 if (n == 0 && self.a & 0xF > 0x9) || h == 1 {
@@ -288,6 +289,7 @@ impl Cpu {
 
                 if (n == 0 && self.a > 0x99) || c == 1 {
                     offset |= 0x60;
+                    carry = true;
                 }
 
                 if n == 0 {
@@ -295,6 +297,9 @@ impl Cpu {
                 } else {
                     res = self.a.wrapping_sub(offset);
                 }
+                self.set_flag(Flag::Z, (res == 0) as u8);
+                self.set_flag(Flag::H, 0);
+                self.set_flag(Flag::C, carry as u8);
                 self.a = res;
             },
             MicroOp::Prefix => {
@@ -308,6 +313,9 @@ impl Cpu {
             let old_opcode = self.ir;
             let prefix = self.prefix;
             if !prefix {
+                if GLOB_SETTINGS.get().unwrap().doctor_logs {
+                    emu_print!("{}", self.get_doctor_log(bus))
+                }
                 dbg.on_cpu_event(DebugEvent::InstructionEnd(old_opcode), self, bus);
             }
             self.execute_prefetch(bus);
@@ -423,6 +431,9 @@ impl Cpu {
                 let (res, flags) = Self::alu_rsh(shift, val, self.get_flag(Flag::C));
                 self.set_target(dest, res, bus);
                 self.set_flags(flags, mask);
+                if shift == ShiftType::R && dest == RWTarget::Reg8(Reg8::A) {
+                    self.set_flag(Flag::Z, 0);
+                }
             }
 
             Operation::Lsh {shift, source, dest, mask} => {

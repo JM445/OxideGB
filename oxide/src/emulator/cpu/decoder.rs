@@ -350,7 +350,7 @@ impl Cpu {
             3 => (false, R),
             4 => (true, SA),
             5 => (false, SA),
-            7 => (true, SL),
+            7 => (false, SL),
             6 => {
                 match target {
                     RWTarget::Reg8(r) => {return Self::decode_swap_rr(r);},

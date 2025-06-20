@@ -11,6 +11,7 @@ use std::hash::{DefaultHasher, Hash, Hasher};
 use log::{debug, info, warn};
 
 use std::path::Path;
+use crate::settings::GLOB_SETTINGS;
 
 pub struct Bus {
     pub cartridge: AnyCartridge,
@@ -151,7 +152,9 @@ impl Bus {
     #[allow(unused_variables, dead_code)]
     fn read_regs(&self, addr: u16) -> u8 {
         match addr {
-            0xFF44 | 0xFF02 => 0xFF, // Temporary values to run Mooneye
+            0xFF44 | 0xFF02 => {
+                if GLOB_SETTINGS.get().unwrap().doctor_logs {0x90} else {0xFF}
+            }, // Temporary values to run Mooneye and GB Doctor
             0xFF00..0xFF80 => self.ioregs[addr as usize - 0xFF00],
             _ => 0x00
         }

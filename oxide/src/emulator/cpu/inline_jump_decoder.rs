@@ -17,7 +17,7 @@ impl Cpu {
                 source: RWTarget::Reg8(Reg8::PCH), dest: RWTarget::Indirect16D(Reg16::SP), prefetch: false
             },
             MicroOp::DataMove {
-                source: RWTarget::Reg8(Reg8::PCH), dest: RWTarget::Indirect16(Reg16::SP), prefetch: false
+                source: RWTarget::Reg8(Reg8::PCL), dest: RWTarget::Indirect16(Reg16::SP), prefetch: false
             },
             MicroOp::DataMove {
                 source: RWTarget::Reg16(Reg16::WZ), dest: RWTarget::Reg16(Reg16::PC), prefetch: true
@@ -40,12 +40,14 @@ impl Cpu {
                 source: RWTarget::Reg16(Reg16::SP), dest: RWTarget::Reg16(Reg16::SP), mask: 0b0000
             }, prefetch: false},
             MicroOp::DataMove {
-                source: RWTarget::Indirect16D(Reg16::SP), dest: RWTarget::Reg8(Reg8::PCH), prefetch: false
+                source: RWTarget::Reg8(Reg8::PCH), dest: RWTarget::Indirect16D(Reg16::SP), prefetch: false
             },
             MicroOp::DataMove {
-                source: RWTarget::Indirect16(Reg16::SP), dest: RWTarget::Reg8(Reg8::PCL), prefetch: false
+                source: RWTarget::Reg8(Reg8::PCL), dest: RWTarget::Indirect16(Reg16::SP), prefetch: false
             },
-            MicroOp::PrefetchOnly
+            MicroOp::DataMove {
+                source: RWTarget::Reg16(Reg16::WZ), dest: RWTarget::Reg16(Reg16::PC), prefetch: true
+            }
         ])
     }
 

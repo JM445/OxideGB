@@ -11,6 +11,8 @@ use crate::debugger::*;
 
 
 use std::path::Path;
+use crate::emu_print;
+use crate::settings::GLOB_SETTINGS;
 
 pub struct Emulator {
     pub cpu: Cpu,
@@ -26,7 +28,11 @@ impl Emulator {
         } else {
             Cpu::new_noboot()
         };
-        
+
+        if GLOB_SETTINGS.get().unwrap().doctor_logs {
+            emu_print!("{}", cpu.get_doctor_log(&bus))
+        }
+
         Ok(Emulator{
             cpu,
             bus,

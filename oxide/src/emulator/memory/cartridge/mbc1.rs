@@ -18,7 +18,7 @@ impl Mbc for Mbc1 {
                 let bank = self.ram_bank << 5;
                 rom[bank as usize * 0x4000 + addr as usize]
             }
-            (0x4000..0x7FFF, _, _) => {
+            (0x4000..0x8000, _, _) => {
                 let mut bank = self.ram_bank & 0b11111;
                 if bank == 0 {bank = 1};
                 rom[bank as usize * 0x4000 + (addr - 0x4000) as usize]
@@ -34,7 +34,7 @@ impl Mbc for Mbc1 {
                 let bank = self.ram_bank & 0b11;
                 ram[(addr as usize - 0xA000) + 0x2000 * bank as usize]
             }
-            (_, _, _) => panic!("Should be unreachable"),
+            (_, _, _) => panic!("Should be unreachable. Addr: {addr:#06X}"),
         }
     }
 
