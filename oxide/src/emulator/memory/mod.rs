@@ -19,6 +19,8 @@ pub struct Bus {
     pub ioregs: [u8; 0x80],
     pub boot_rom: [u8; 256],
     pub boot_enabled: bool,
+    
+    pub div_written: bool,
 }
 
 #[derive(Debug, Copy, Clone, PartialOrd, PartialEq, Eq, Hash)]
@@ -99,7 +101,9 @@ impl Bus {
             ram: Ram::new(),
             ioregs: [0; 0x80],
             boot_rom,
-            boot_enabled
+            boot_enabled,
+            
+            div_written: false
         })
     }
 
@@ -164,6 +168,11 @@ impl Bus {
     fn write_regs(&mut self, addr: u16, value: u8) {
         match addr {
             0xFF50 => self.boot_enabled = false,
+            0xFF04 => {
+                debug!("DIV Register written. Resetting counter to 0.");
+                self.div_written = true;
+                self.ioregs[0x04] = 0x00;
+            },
             0xFF00..0xFF80 => self.ioregs[addr as usize - 0xFF00] = value,
             _ => ()
         }

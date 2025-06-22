@@ -83,7 +83,7 @@ impl Cpu {
     #[inline]
     pub fn decode_ldh_c_a() -> VecDeque<MicroOp> {
         VecDeque::from(vec![
-            MicroOp::DataMove{source: RWTarget::HRAM(Reg8::C), dest: RWTarget::Reg8(Reg8::A), prefetch: false},
+            MicroOp::DataMove{source: RWTarget::Reg8(Reg8::A), dest: RWTarget::HRAM(Reg8::C), prefetch: false},
             MicroOp::PrefetchOnly,
         ])
     }
@@ -91,7 +91,7 @@ impl Cpu {
     #[inline]
     pub fn decode_ldh_a_c() -> VecDeque<MicroOp> {
         VecDeque::from(vec![
-            MicroOp::DataMove{source: RWTarget::Reg8(Reg8::A), dest: RWTarget::HRAM(Reg8::C), prefetch: false},
+            MicroOp::DataMove{source: RWTarget::HRAM(Reg8::C), dest: RWTarget::Reg8(Reg8::A), prefetch: false},
             MicroOp::PrefetchOnly,
         ])
     }

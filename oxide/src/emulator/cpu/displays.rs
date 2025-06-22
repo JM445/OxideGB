@@ -1,5 +1,6 @@
 use super::*;
 use std::fmt;
+use crate::emulator::cpu::interrupt::Interrupt;
 
 impl fmt::Display for MicroOp {
     fn fmt(&self, f:&mut fmt::Formatter) -> fmt::Result {
@@ -129,5 +130,19 @@ impl fmt::Display for Operation {
         };
 
         write!(f, "{}", s)
+    }
+}
+
+impl fmt::Display for Interrupt {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let s = match self {
+            Interrupt::Joypad => "JOYPAD",
+            Interrupt::LCD => "LCD",
+            Interrupt::Serial => "SERIAL",
+            Interrupt::Timer => "TIMER",
+            Interrupt::VBlank => "VBLANK"
+        };
+        
+        write!(f, "{}",s )
     }
 }

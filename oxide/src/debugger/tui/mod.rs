@@ -71,7 +71,7 @@ impl<'a> Ui<'a> {
     }
 
     fn handle_events(&mut self) -> io::Result<()> {
-        let e = event::read().unwrap();
+        let e = event::read()?;
         let input = Input::from(e.clone());
 
         if let Event::Key(event) = e {

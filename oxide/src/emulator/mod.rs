@@ -2,6 +2,7 @@ pub mod memory;
 pub mod ppu;
 
 pub mod cpu;
+mod internals;
 
 use cpu::*;
 use memory::*;
@@ -18,6 +19,8 @@ pub struct Emulator {
     pub cpu: Cpu,
     pub bus: Bus,
     pub ppu: Ppu,
+    
+    pub ticks: usize
 }
 
 impl Emulator {
@@ -37,12 +40,20 @@ impl Emulator {
             cpu,
             bus,
             ppu: Default::default(),
+            
+            ticks: 0
         })
     }
 
     pub fn tick<T>(&mut self, dbg: &mut T)
     where T: Debugger {
-        self.cpu.tick(&mut self.bus, dbg);
+        self.ticks = self.ticks.wrapping_add(1);
+        
+        if self.ticks & 0b11 == 0 { // M-Cycle
+            self.cpu.tick(&mut self.bus, dbg);
+        }
+        
+        // T-Cycle
         self.bus.tick_serial();
         self.ppu.tick(&mut self.bus, dbg);
     }

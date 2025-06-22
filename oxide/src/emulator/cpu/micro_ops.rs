@@ -8,6 +8,7 @@ use log::{debug, error, info, warn};
 use crate::emulator::memory::Bus;
 
 use super::*;
+use super::interrupt::*;
 
 use std::num::Wrapping;
 
@@ -160,10 +161,10 @@ impl Cpu {
         let borrow = right + carry;
 
         (res.0,
-        ((((res.0 & 0xFF) == 0) as u8) << 3) |              // Z
-        0b0100 |                                            // N
-        (((left.0 & 0xF) < (borrow.0 & 0xF)) as u8) << 1 |  // H
-        (((left.0 & 0xFF) < (borrow.0 & 0xFF)) as u8))      // C
+        ((((res.0 & 0xFF) == 0) as u8) << 3) |                       // Z
+        0b0100 |                                                     // N
+        (((left.0 & 0xF) < (right.0 & 0xF) + carry.0) as u8) << 1 |  // H
+        (((left.0 & 0xFF) < (right.0 & 0xFF) + carry.0) as u8))      // C
     }
 
     fn alu_and(left: Wrapping<u16>, right: Wrapping<u16>) -> (u16, u8) {
@@ -200,8 +201,8 @@ impl Cpu {
         let (res, c) = match shift {
             ShiftType::R => ((val << 1).0 | (old_c & 0x01), (val.0 & 0x80) >> 7),
             ShiftType::RC => ((val << 1).0 | ((val.0 & 0x80) >> 7), (val.0 & 0x80) >> 7),
-            ShiftType::SL => ((val << 1).0, (val.0 & 0x80) >> 7),
-            ShiftType::SA => {
+            ShiftType::SA => ((val << 1).0, (val.0 & 0x80) >> 7),
+            ShiftType::SL => {
                 error!("Error: Invalid Shift Left Arithmetic");
                 (val.0, 0)
             }
@@ -271,9 +272,13 @@ impl Cpu {
             MicroOp::Ccf => {
                 let val = (self.get_flag(Flag::C) == 0) as u8;
                 self.set_flag(Flag::C, val);
+                self.set_flag(Flag::N, 0);
+                self.set_flag(Flag::H, 0);
             },
             MicroOp::Scf => {
                 self.set_flag(Flag::C, 1);
+                self.set_flag(Flag::N, 0);
+                self.set_flag(Flag::H, 0);
             },
             MicroOp::Daa => {
                 let h = self.get_flag(Flag::H);
@@ -431,7 +436,9 @@ impl Cpu {
                 let (res, flags) = Self::alu_rsh(shift, val, self.get_flag(Flag::C));
                 self.set_target(dest, res, bus);
                 self.set_flags(flags, mask);
-                if shift == ShiftType::R && dest == RWTarget::Reg8(Reg8::A) {
+                
+                // Dirty Fix for RRCA/RRA Z flag reset...
+                if bus.read(self.ir_pc - 1) != 0xCB && dest == RWTarget::Reg8(Reg8::A) {
                     self.set_flag(Flag::Z, 0);
                 }
             }
@@ -441,6 +448,11 @@ impl Cpu {
                 let (res, flags) = Self::alu_lsh(shift, val, self.get_flag(Flag::C));
                 self.set_target(dest, res, bus);
                 self.set_flags(flags, mask);
+
+                // Dirty Fix for RLCA/RLA Z flag reset...
+                if bus.read(self.ir_pc - 1) != 0xCB && dest == RWTarget::Reg8(Reg8::A) {
+                self.set_flag(Flag::Z, 0);
+                }
             },
 
             Operation::Swp { source, dest, mask } => {
@@ -483,18 +495,24 @@ impl Cpu {
         self.pc += 1;
     }
 
-    pub (super) fn execute_prefetch(&mut self, bus: &Bus) {
-        self.ir = bus.read(self.pc);
-        self.ir_pc = self.pc;
-        self.pc += 1;
-        if !self.prefix  {
-            self.next_ops.append(&mut Self::decode(self.ir));
-            self.cond_ops.clear();
-            self.cond_ops.append(&mut Self::decode_condition(self.ir));
+    pub (super) fn execute_prefetch(&mut self, bus: &mut Bus) {
+        if !self.check_interrupt(bus) || self.prefix {
+            self.ir = bus.read(self.pc);
+            self.ir_pc = self.pc;
+            self.pc += 1;
+            if !self.prefix {
+                self.next_ops.append(&mut Self::decode(self.ir));
+                self.cond_ops.clear();
+                self.cond_ops.append(&mut Self::decode_condition(self.ir));
+            } else {
+                self.next_ops.append(&mut Self::decode_prefix_opcode(self.ir));
+                self.cond_ops.clear();
+                self.prefix = false;
+            }
         } else {
-            self.next_ops.append(&mut Self::decode_prefix_opcode(self.ir));
+            self.next_ops.clear();
             self.cond_ops.clear();
-            self.prefix = false;
+            self.next_ops.append(&mut self.decode_interrupt(bus));
         }
     }
 

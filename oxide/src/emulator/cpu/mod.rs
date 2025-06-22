@@ -8,6 +8,7 @@ mod inline_alu_decoder;
 mod inline_jump_decoder;
 mod inline_misc_decoder;
 mod inline_binop_decoder;
+pub(crate) mod interrupt;
 
 use micro_ops::*;
 use registers::*;

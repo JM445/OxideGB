@@ -1,4 +1,16 @@
-SECTION "Test code", ROM0
+SECTION "Test code", ROM0[0x100]
 
-ld HL,0xC000                    ;
-ld [HL],A                       ;
+nop                             ;
+ld b, $1                        ;
+sla b                           ;
+                                ;
+nop                             ;
+ld b, $10                       ;
+sla b                           ;
+
+nop                             ;
+ld b, $FF                       ;
+sla b                           ;
+
+loop:
+    jr loop
