@@ -125,7 +125,7 @@ impl Bus {
                 warn!("Memory read to prohibited zone: {:#06X}", addr);
                 0xFF
             },
-            0xFF00..=0xFF7F => self.read_regs(addr),
+            0xFF00..=0xFF7F | 0xFFFF => self.read_regs(addr),
             _ => 0xFF
         }
     }
@@ -138,7 +138,7 @@ impl Bus {
             0x0000..=0x7FFF | 0xA000..=0xBFFF => self.cartridge.write(addr, value),
             0x8000..=0x9FFF | 0xC000..=0xEFFF | 0xF000..=0xFE9F | 0xFF80..=0xFFFE => self.ram.write(addr, value),
             0xFEA0..=0xFEFF => warn!("Memory write to prohibited zone: {:#06X}", addr),
-            0xFF00..=0xFF7F => self.write_regs(addr, value),
+            0xFF00..=0xFF7F | 0xFFFF => self.write_regs(addr, value),
             _ => ()
         }
     }
@@ -160,6 +160,7 @@ impl Bus {
                 if GLOB_SETTINGS.get().unwrap().doctor_logs {0x90} else {0xFF}
             }, // Temporary values to run Mooneye and GB Doctor
             0xFF00..0xFF80 => self.ioregs[addr as usize - 0xFF00],
+            0xFFFF => self.ioregs[0x7F],
             _ => 0x00
         }
     }
@@ -174,6 +175,7 @@ impl Bus {
                 self.ioregs[0x04] = 0x00;
             },
             0xFF00..0xFF80 => self.ioregs[addr as usize - 0xFF00] = value,
+            0xFFFF => self.ioregs[0x7F] = value,
             _ => ()
         }
     }

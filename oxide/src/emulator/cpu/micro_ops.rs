@@ -496,7 +496,8 @@ impl Cpu {
     }
 
     pub (super) fn execute_prefetch(&mut self, bus: &mut Bus) {
-        if !self.check_interrupt(bus) || self.prefix {
+        let interrupt = bus.get_first_interrupt();
+        if !self.ime || interrupt == Interrupt::None {
             self.ir = bus.read(self.pc);
             self.ir_pc = self.pc;
             self.pc += 1;
@@ -512,7 +513,9 @@ impl Cpu {
         } else {
             self.next_ops.clear();
             self.cond_ops.clear();
-            self.next_ops.append(&mut self.decode_interrupt(bus));
+            self.next_ops.append(&mut self.decode_interrupt(interrupt));
+            bus.unset_interrupt(interrupt);
+            self.ime = false;
         }
     }
 

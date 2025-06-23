@@ -140,7 +140,8 @@ impl fmt::Display for Interrupt {
             Interrupt::LCD => "LCD",
             Interrupt::Serial => "SERIAL",
             Interrupt::Timer => "TIMER",
-            Interrupt::VBlank => "VBLANK"
+            Interrupt::VBlank => "VBLANK",
+            Interrupt::None => "NONE",
         };
         
         write!(f, "{}",s )

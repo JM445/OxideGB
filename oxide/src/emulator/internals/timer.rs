@@ -41,7 +41,7 @@ impl Timer {
             }
         }
         
-        bus.write(DIV, (self.cycles >> 8) as u8);
+        bus.ioregs[0x04] = (self.cycles >> 8) as u8;
     }
     
     fn get_taken_bit(&self, tac: u8) -> bool {
