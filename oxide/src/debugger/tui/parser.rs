@@ -3,6 +3,7 @@ use crate::debugger::full_debugger::*;
 use super::ui_utils::*;
 use super::*;
 use log::debug;
+use log::Level::{Error, Info, Trace, Warn};
 
 impl<'a> Ui<'a> {
     pub (super) fn parse_line(&mut self, line: &str) {
@@ -25,6 +26,7 @@ impl<'a> Ui<'a> {
                 "break" | "b" => {self.parse_breakpoint(&words[1..]);},
                 "continue" | "c" => self.tick(),
                 "mem" | "m" => self.parse_mem(&words[1..]),
+                "log" => self.parse_log(&words[1..]),
                 _ => {
                     self.last_cmd = None;
                     self.cmd_area.insert_str(format!("Error: Unknown command: {}\n> ", line));
@@ -32,6 +34,22 @@ impl<'a> Ui<'a> {
             }
         } else if let Some(ref last) = self.last_cmd.clone() {
             self.parse_line(last);
+        }
+    }
+    
+    fn parse_log(&mut self, words: &[&str]) -> () {
+        if words.len() == 0 {
+            self.log_level = Debug
+        } else {
+            match words[0].to_lowercase().as_str() {
+                "trace" => self.log_level = Trace,
+                "debug" => self.log_level = Debug,
+                "info"  => self.log_level = Info,
+                "warn"  => self.log_level = Warn,
+                "error" => self.log_level = Error,
+                _ => {self.cmd_area.insert_str(format!("Error: Unknown log level: {}", words[0]));}
+            }
+            log::set_max_level(self.log_level.to_level_filter())
         }
     }
     

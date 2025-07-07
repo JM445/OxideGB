@@ -1,4 +1,4 @@
-use log::debug;
+use log::{debug, info};
 use crate::emulator::memory::Bus;
 use crate::emulator::cpu::interrupt::*;
 
@@ -35,7 +35,7 @@ impl Timer {
             if tima == 0xFF {
                 bus.set_interrupt(Interrupt::Timer);
                 bus.write(TIMA, tma);
-                debug!("Interrupt Requested: Timer");
+                info!("Interrupt Requested: Timer");
             } else {
                 bus.write(TIMA, tima.wrapping_add(1));
             }

@@ -135,7 +135,14 @@ impl Bus {
         debug!("Memory write: 0x{:#04X} => 0x{:#06X}", value, addr);
 
         match addr {
-            0x0000..=0x7FFF | 0xA000..=0xBFFF => self.cartridge.write(addr, value),
+            0x0000..=0x7FFF => self.cartridge.write(addr, value),
+            0xA000..=0xBFFF => {
+                if self.cartridge.is_writeable(addr) {
+                    self.cartridge.write(addr, value)
+                } else {
+                    self.write((addr - 0xA000) + (0x8000), value)
+                }
+            }  
             0x8000..=0x9FFF | 0xC000..=0xEFFF | 0xF000..=0xFE9F | 0xFF80..=0xFFFE => self.ram.write(addr, value),
             0xFEA0..=0xFEFF => warn!("Memory write to prohibited zone: {:#06X}", addr),
             0xFF00..=0xFF7F | 0xFFFF => self.write_regs(addr, value),

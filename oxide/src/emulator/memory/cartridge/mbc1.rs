@@ -53,15 +53,21 @@ impl Mbc for Mbc1 {
             },
             0x6000..0x8000 => self.bank_mode = (value & 1) != 0,
             0xA000..0xC000 => {
-                if self.ram_enable {
-                    let bank = self.ram_bank & 0b11;
+                let bank = self.ram_bank & 0b11;
+                if bank as usize >= self.ram_count {
+                    ()
+                } else if self.ram_enable {
                     ram[(addr as usize - 0xA000) + 0x2000 * bank as usize] = value;
                 }
             }
             _ => ()
         }
     }
-    
+
+    fn is_writeable(&self, addr: u16) -> bool {
+        let bank = self.ram_bank & 0b11;
+        bank < self.ram_bank
+    }
 }
 
 impl Mbc1 {

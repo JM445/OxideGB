@@ -18,4 +18,7 @@ impl Mbc for NoMbc {
         }
     }
 
+    fn is_writeable(&self, _addr: u16) -> bool {
+        true
+    }
 }

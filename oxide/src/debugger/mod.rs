@@ -41,11 +41,11 @@ pub struct LogDebugger {}
 
 impl Debugger for LogDebugger {
     fn on_cpu_event(&mut self, event: DebugEvent, _cpu: &Cpu, _bus: &Bus) {
-        info!("LogDebugger: CPU Event received: {event}");
+        debug!("LogDebugger: CPU Event received: {event}");
     }
 
     fn on_ppu_event(&mut self, event: DebugEvent, _ppu: &Ppu, _bus: &Bus) {
-        info!("LogDebugger: PPU Event received: {event}");
+        debug!("LogDebugger: PPU Event received: {event}");
     }
 }
 

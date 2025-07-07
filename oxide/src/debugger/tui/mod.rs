@@ -12,7 +12,8 @@ use crate::emulator::*;
 use std::collections::VecDeque;
 use std::path::Path;
 use std::io;
-
+use log::Level;
+use log::Level::Debug;
 use ratatui::{
     crossterm::event,
     crossterm::event::{Event, KeyCode},
@@ -32,6 +33,7 @@ pub struct Ui<'a> {
     debugger: FullDebugger,
     last_cmd: Option<String>,
     code_map: CodeMap,
+    log_level: Level
 }
 
 impl<'a> Ui<'a> {
@@ -52,6 +54,7 @@ impl<'a> Ui<'a> {
             debugger: dbg,
             last_cmd: None,
             code_map: CodeMap::new(),
+            log_level: Debug
         }
     }
 

@@ -9,6 +9,8 @@ use std::path::Path;
 pub trait Mbc {
     fn read(&self, rom: &[u8], ram: &[u8], addr: u16) -> u8;
     fn write(&mut self, ram: &mut [u8], addr: u16, value: u8) -> ();
+    
+    fn is_writeable(&self, addr: u16) -> bool;
 }
 
 pub struct Cartridge<M: Mbc> {
@@ -30,6 +32,8 @@ impl<M: Mbc> Cartridge<M> {
     fn write(&mut self, addr: u16, value: u8) -> () {
         self.mbc.write(&mut self.ram, addr, value);
     }
+    
+    fn is_writeable(&self, addr: u16) -> bool { self.mbc.is_writeable(addr) }
 }
 
 impl AnyCartridge {
@@ -44,6 +48,13 @@ impl AnyCartridge {
         match self {
             AnyCartridge::NoMbc(cart) => cart.write(addr, value),
             AnyCartridge::MBC1(cart) => cart.write(addr, value),
+        }
+    }
+    
+    pub fn is_writeable(&self, addr: u16) -> bool {
+        match self {
+            AnyCartridge::MBC1(cart) => cart.is_writeable(addr),
+            AnyCartridge::NoMbc(cart) => cart.is_writeable(addr),
         }
     }
     
