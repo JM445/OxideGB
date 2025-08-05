@@ -1,3 +1,6 @@
 [submodule "ROMs/Blargg"]
 	path = ROMs/Blargg
 	url = https://github.com/retrio/gb-test-roms.git
+[submodule "doctor"]
+	path = doctor
+	url = https://github.com/robert/gameboy-doctor.git
