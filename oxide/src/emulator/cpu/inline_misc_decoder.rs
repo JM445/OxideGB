@@ -28,8 +28,9 @@ impl Cpu {
 
     #[inline]
     pub fn decode_halt() -> VecDeque<MicroOp> {
-        error!("Error: Decoding an unimplemented instruction: HALT");
-        Self::decode_noop()
+        VecDeque::from(vec![
+            MicroOp::Halt
+        ])
     }
 
     #[inline]

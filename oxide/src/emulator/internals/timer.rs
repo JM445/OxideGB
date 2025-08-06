@@ -15,7 +15,7 @@ pub struct Timer {
 
 impl Timer {
     
-    // Should Be ticked every T cycle 
+    // Should Be ticked every T cycle
     pub fn tick(&mut self, bus: &mut Bus) {
         self.cycles = self.cycles.wrapping_add(1);
         if bus.div_written {
@@ -31,7 +31,7 @@ impl Timer {
         let taken_bit = self.get_taken_bit(tac);
         let and_result = enable && taken_bit;
         
-        if !self.last_and_result && and_result { // TIMA Increments
+        if self.last_and_result && !and_result { // TIMA Increments
             if tima == 0xFF {
                 bus.set_interrupt(Interrupt::Timer);
                 bus.write(TIMA, tma);
@@ -40,7 +40,7 @@ impl Timer {
                 bus.write(TIMA, tima.wrapping_add(1));
             }
         }
-        
+        self.last_and_result = and_result;
         bus.ioregs[0x04] = (self.cycles >> 8) as u8;
     }
     

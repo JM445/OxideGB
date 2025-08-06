@@ -21,6 +21,7 @@ impl fmt::Display for MicroOp {
             MicroOp::Prefix => "PREFIX".to_string(),
             MicroOp::PrefetchOnly => "PrefetchOnly".to_string(),
             MicroOp::ScheduleEI => "EI".to_string(),
+            MicroOp::Halt => "HALT".to_string()
         };
 
         write!(f, "{}", s)

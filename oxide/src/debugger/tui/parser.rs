@@ -27,6 +27,10 @@ impl<'a> Ui<'a> {
                 "continue" | "c" => self.tick(),
                 "mem" | "m" => self.parse_mem(&words[1..]),
                 "log" => self.parse_log(&words[1..]),
+                "cycle" => {
+                    let cycles = self.emulator.get_t_cycle();
+                    info!("Current T-Cycle: {cycles}")
+                }
                 _ => {
                     self.last_cmd = None;
                     self.cmd_area.insert_str(format!("Error: Unknown command: {}\n> ", line));

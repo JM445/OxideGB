@@ -22,6 +22,7 @@ use std::collections::VecDeque;
 #[allow(unused_imports)]
 use log::{debug, error, info, warn};
 use crate::emu_print;
+use crate::emulator::memory::RegDefines::*;
 use crate::settings::GLOB_SETTINGS;
 
 #[derive(Debug)]
@@ -44,6 +45,9 @@ pub struct Cpu {
     pub ime: bool, // Iterrupt Enable flag
     pub ir: u8,    // Instruction Register
     pub ir_pc: u16,// Address of current instruction
+    
+    pub halted: bool, // Is CPU Halted ?
+    
     prefix: bool,  // Was the last decoded instruction the 0xCB prefix ?
     ei_next: bool, // Is an EI scheduled for next cycle ?
     next_ops: VecDeque<MicroOp>,
@@ -72,6 +76,8 @@ impl Cpu {
             ime: false,
             ir: 0,
             ir_pc: 0,
+            
+            halted: false,
             prefix: false,
             ei_next: false,
             next_ops: VecDeque::new(),
@@ -98,6 +104,8 @@ impl Cpu {
             ime: false,
             ir: 0,
             ir_pc: 0,
+            halted: false,
+            
             prefix: false,
             ei_next: false,
             next_ops: VecDeque::new(),
@@ -120,6 +128,14 @@ impl Cpu {
     pub fn tick<T>(&mut self, bus: &mut Bus, dbg: &mut T)
         where T: Debugger
     {
+        if self.halted && ((bus.read(IF) & 0x1F) & (bus.read(IE) & 0x1F)) != 0 {
+            self.execute_interrupt(bus);
+            self.halted = false;
+        }
+        
+        if self.halted {
+            return
+        }
         if self.ei_next {
             self.ei_next = false;
             self.ime = true;

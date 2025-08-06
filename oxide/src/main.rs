@@ -27,6 +27,7 @@ macro_rules! emu_print {
             write!(file, $($arg)*).unwrap();
         } else {
             print!($($arg)*);
+            std::io::stdout().flush().unwrap()
         }
     }};
 }

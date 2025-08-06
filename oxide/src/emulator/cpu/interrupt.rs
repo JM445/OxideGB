@@ -1,11 +1,7 @@
-use std::io::ErrorKind::Interrupted;
 use std::ops::{BitAnd, BitOr, Not};
 use super::*;
-use crate::emulator::memory::*;
+use crate::emulator::memory::RegDefines::*;
 
-
-const IE: u16 = 0xFFFF;
-const IF: u16 = 0xFF0F;
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Interrupt {
     None   = 0,

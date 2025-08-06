@@ -1,8 +1,6 @@
 SECTION "Timer Interrupt", ROM0[0x50]
 
-    nop
-    jp timer_fn
-    nop
+    jp timer_handler
 
 SECTION "Entrypoint", ROM0[0x100]
     nop
@@ -11,43 +9,68 @@ SECTION "Entrypoint", ROM0[0x100]
 
 SECTION "Main", ROM0[0x150]
 main:
-    ld  a, 0x05
+    nop
+    nop
+    ld sp, 0xE000
+    ld a, 0x42
+    ldh [0xFF02], a
+    nop
+
+    ld hl, hello
+    call print_string
+
+    /* T-Cycle: 2152 */
+
+    ld a, $FF
+    ldh [0xFF06], a             ; Set timer to overflow at each 4 M-Cycles
+    ld a, $05
     ldh [0xFF07], a
-    ld  a, 0x00
-    ldh [0xFF04], a
-    ld  a, 0b100
-    ldh [0xFFFF], a
+    ld a, $FF
+    ldh [0xFF05], a             ; Set TIMA to FF
+    ldh [0xFF04], a             ; Reset DIV
     ei
-    nop
+    ldh [0xFFFF], a
 
-loop:
-    nop
-    nop
-    jr loop
+endloop:
+    jr endloop
 
 
-timer_fn:
-    ld  a, 0x01
-    ldh [0xFF07], a
-
-    ld  a, "O"
+print_char:                     ; Print char in A
+    push af
     ldh [0xFF01], a
-
-    ld  a, $81
+    ld a, $81
     ldh [0xFF02], a
+    pop af
+    ret
 
-    ld  a, "k"
-    ldh [0xFF01], a
+print_string:                   ; Print string at HL
+    push af
+    push hl
 
-    ld  a, $81
-    ldh [0xFF02], a
+print_loop:
+    ld a, [hl+]
+    cp 0
+    jr z, .quit
+    call print_char
+    jp print_loop
 
-    ld  a, 0x0A
-    ldh [0xFF01], a
 
-    ld  a, $81
-    ldh [0xFF02], a
+.quit:
+    pop hl
+    pop af
+    ret
 
-    ld  a, 0x05
-    ldh [0xFF07], a
+timer_handler:
+    ;; reti
+    ld hl, timer_string
+    call print_string
     reti
+
+
+SECTION "Data", ROM0[0x3000]
+
+hello:
+    DB "Hello World !\n",0
+
+timer_string:
+    DB "Hello from timer interrupt !\n",0

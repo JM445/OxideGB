@@ -2,6 +2,8 @@ pub mod cartridge;
 pub mod ram;
 pub mod serial;
 
+pub mod RegDefines;
+
 use cartridge::*;
 use ram::*;
 use std::fs;
@@ -181,6 +183,10 @@ impl Bus {
                 self.div_written = true;
                 self.ioregs[0x04] = 0x00;
             },
+            0xFF02 => {
+                debug!("SC Written. Value: {value}.");
+                self.ioregs[addr as usize - 0xFF00] = value;
+            }
             0xFF00..0xFF80 => self.ioregs[addr as usize - 0xFF00] = value,
             0xFFFF => self.ioregs[0x7F] = value,
             _ => ()

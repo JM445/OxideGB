@@ -27,6 +27,7 @@ pub enum MicroOp {
     RetI,
     PrefetchOnly,
     ScheduleEI,
+    Halt,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -242,7 +243,7 @@ impl Cpu {
             MicroOp::RetI { .. } => false,
             MicroOp::PrefetchOnly |
             MicroOp::Cpl | MicroOp::Daa | MicroOp::Ccf | MicroOp::Scf |
-            MicroOp::Prefix |
+            MicroOp::Prefix | MicroOp::Halt |
             MicroOp::ScheduleEI => true,
         };
 
@@ -312,6 +313,9 @@ impl Cpu {
             }
             MicroOp::ScheduleEI => self.ei_next = true,
             MicroOp::PrefetchOnly => (),
+            MicroOp::Halt => {
+                self.halted = true
+            }
         };
 
         if prefetch {
@@ -496,21 +500,24 @@ impl Cpu {
     }
 
     pub (super) fn execute_prefetch(&mut self, bus: &mut Bus) {
-        let interrupt = bus.get_first_interrupt();
-        if !self.ime || interrupt == Interrupt::None {
-            self.ir = bus.read(self.pc);
-            self.ir_pc = self.pc;
-            self.pc += 1;
-            if !self.prefix {
-                self.next_ops.append(&mut Self::decode(self.ir));
-                self.cond_ops.clear();
-                self.cond_ops.append(&mut Self::decode_condition(self.ir));
-            } else {
-                self.next_ops.append(&mut Self::decode_prefix_opcode(self.ir));
-                self.cond_ops.clear();
-                self.prefix = false;
-            }
+        self.ir = bus.read(self.pc);
+        self.ir_pc = self.pc;
+        self.pc += 1;
+        if !self.prefix {
+            self.next_ops.append(&mut Self::decode(self.ir));
+            self.cond_ops.clear();
+            self.cond_ops.append(&mut Self::decode_condition(self.ir));
         } else {
+            self.next_ops.append(&mut Self::decode_prefix_opcode(self.ir));
+            self.cond_ops.clear();
+            self.prefix = false;
+        }
+        self.execute_interrupt(bus);
+    }
+    
+    pub (crate) fn execute_interrupt(&mut self, bus: &mut Bus) {
+        if self.check_interrupt(bus) {
+            let interrupt = bus.get_first_interrupt();
             self.next_ops.clear();
             self.cond_ops.clear();
             self.next_ops.append(&mut self.decode_interrupt(interrupt));

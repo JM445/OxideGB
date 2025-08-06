@@ -4,6 +4,7 @@ pub mod ppu;
 pub mod cpu;
 mod internals;
 
+use log::info;
 use cpu::*;
 use memory::*;
 use ppu::*;
@@ -47,6 +48,14 @@ impl Emulator {
             
             ticks: 0
         })
+    }
+    
+    pub fn get_t_cycle(&self) -> usize {
+        self.ticks
+    }
+    
+    pub fn get_m_cycle(&self) -> usize {
+        self.ticks / 4
     }
 
     pub fn tick<T>(&mut self, dbg: &mut T)

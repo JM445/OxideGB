@@ -152,7 +152,8 @@ impl<'a> Ui<'a> {
             Line::from(vec![
                 "H: ".blue().bold().into(),  format!("{:#04X}", cpu.h).into(), "  ".into(),
                 "L: ".blue().bold().into(),  format!("{:#04X}", cpu.l).into(), "  ".into(),
-                "HL: ".blue().bold().into(), format!("{:#06X}", cpu.read16(Reg16::HL)).into(), "            ".into(),
+                "HL: ".blue().bold().into(), format!("{:#06X}", cpu.read16(Reg16::HL)).into(), "  ".into(),
+                "IME: ".blue().bold().into(), match cpu.ime { true => "1".into(), false => "0".into()}, "    ".into()
             ]),
             Line::from(vec![
                 "Z: ".blue().bold().into(), format!("{} ", cpu.get_flag(Flag::Z)).into(),
