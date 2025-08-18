@@ -17,3 +17,11 @@ pub const TAC: u16  = 0xFF07;
 /* Interrupts */
 pub const IF: u16   = 0xFF0F;
 pub const IE: u16   = 0xFFFF;
+
+/* LCD */
+pub const LY: u16   = 0xFF44;
+pub const LYC: u16  = 0xFF45;
+pub const STAT: u16 = 0xFF41;
+
+/* Misc */
+pub const BANK: u16 = 0xFF50;

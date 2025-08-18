@@ -3,6 +3,7 @@ pub mod ram;
 pub mod serial;
 
 pub mod RegDefines;
+mod ioregs;
 
 use cartridge::*;
 use ram::*;
@@ -13,6 +14,9 @@ use std::hash::{DefaultHasher, Hash, Hasher};
 use log::{debug, info, warn};
 
 use std::path::Path;
+use crate::emulator::memory::RegDefines::STAT;
+use crate::emulator::ppu;
+use crate::emulator::ppu::Mode;
 use crate::settings::GLOB_SETTINGS;
 
 pub struct Bus {
@@ -105,7 +109,7 @@ impl Bus {
             boot_rom,
             boot_enabled,
             
-            div_written: false
+            div_written: false,
         })
     }
 
@@ -122,7 +126,25 @@ impl Bus {
                 }
             }
             0x0100..=0x7FFF | 0xA000..=0xBFFF => self.cartridge.read(addr),
-            0x8000..=0x9FFF | 0xC000..=0xEFFF | 0xF000..=0xFE9F | 0xFF80..=0xFFFE => self.ram.read(addr),
+
+            // VRAM
+            0x8000..=0x9FFF => {
+                if self.get_ppu_mode() != Mode::Mode3 {
+                    self.ram.read(addr)
+                } else {
+                    0xFF
+                }
+            },
+            
+            // OAM RAM
+            0xFE00..=0xFE9F => {
+                if [Mode::Mode0, Mode::Mode1].contains(&self.get_ppu_mode()) {
+                    self.ram.read(addr)
+                } else {
+                    0xFF
+                }
+            }
+            0xC000..=0xEFFF | 0xF000..0xFE00 | 0xFF80..=0xFFFE => self.ram.read(addr),
             0xFEA0..=0xFEFF => {
                 warn!("Memory read to prohibited zone: {:#06X}", addr);
                 0xFF
@@ -145,7 +167,21 @@ impl Bus {
                     self.write((addr - 0xA000) + (0x8000), value)
                 }
             }  
-            0x8000..=0x9FFF | 0xC000..=0xEFFF | 0xF000..=0xFE9F | 0xFF80..=0xFFFE => self.ram.write(addr, value),
+            // VRAM
+            0x8000..=0x9FFF => {
+                if self.get_ppu_mode() != Mode::Mode3 {
+                    self.ram.write(addr, value)
+                } 
+            }
+            
+            // OAM RAM
+            0xFE00..=0xFE9F => {
+                if [Mode::Mode0, Mode::Mode1].contains(&self.get_ppu_mode()) {
+                    self.ram.write(addr, value)
+                }
+            }
+            
+            0xC000..=0xEFFF | 0xF000..0xFE00 | 0xFF80..=0xFFFE => self.ram.write(addr, value),
             0xFEA0..=0xFEFF => warn!("Memory write to prohibited zone: {:#06X}", addr),
             0xFF00..=0xFF7F | 0xFFFF => self.write_regs(addr, value),
             _ => ()
@@ -161,38 +197,7 @@ impl Bus {
         res[3] = self.read(addr.wrapping_add(3));
         res
     }
-
-    #[allow(unused_variables, dead_code)]
-    fn read_regs(&self, addr: u16) -> u8 {
-        match addr {
-            0xFF44 | 0xFF02 => {
-                if GLOB_SETTINGS.get().unwrap().doctor_logs {0x90} else {0xFF}
-            }, // Temporary values to run Mooneye and GB Doctor
-            0xFF00..0xFF80 => self.ioregs[addr as usize - 0xFF00],
-            0xFFFF => self.ioregs[0x7F],
-            _ => 0x00
-        }
-    }
-
-    #[allow(unused_variables, dead_code)]
-    fn write_regs(&mut self, addr: u16, value: u8) {
-        match addr {
-            0xFF50 => self.boot_enabled = false,
-            0xFF04 => {
-                debug!("DIV Register written. Resetting counter to 0.");
-                self.div_written = true;
-                self.ioregs[0x04] = 0x00;
-            },
-            0xFF02 => {
-                debug!("SC Written. Value: {value}.");
-                self.ioregs[addr as usize - 0xFF00] = value;
-            }
-            0xFF00..0xFF80 => self.ioregs[addr as usize - 0xFF00] = value,
-            0xFFFF => self.ioregs[0x7F] = value,
-            _ => ()
-        }
-    }
-
+    
     pub fn iter_at(&self, addr: u16) -> BusIter<'_> {
         BusIter{
             bus: &self,
