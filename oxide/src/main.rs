@@ -3,16 +3,19 @@ pub mod debugger;
 mod settings;
 
 use crate::debugger::tui::ui_logger::UiLogger;
-use crate::debugger::{*};
+use crate::debugger::*;
 use crate::emulator::*;
 
+use self::settings::*;
+use crate::emulator::internals::iomanager::IoManager;
+use crate::emulator::ppu::Frame;
 use clap::{Parser, ValueEnum};
+use crossbeam_channel::{bounded, Sender, Receiver};
 use debugger::tui::tui_main;
 use debugger::DummyDebugger;
 use std::fmt;
+use std::sync::atomic::AtomicU8;
 use std::sync::Arc;
-
-use self::settings::*;
 
 #[macro_export]
 macro_rules! emu_print {
@@ -92,32 +95,51 @@ fn set_settings(cli: &Cli) {
     })).expect("Settings already initialized !");
 }
 
+fn launch_worker(cli: Cli, tx_frame: Sender<Frame>, joystate: Arc<AtomicU8>) -> std::thread::JoinHandle<()> {
+    let io_manager = IoManager::new(tx_frame, joystate);
+
+    std::thread::spawn(move || {
+        let emu_res = Emulator::new(cli.rom_path, cli.boot, io_manager);
+        if let Err(e) = emu_res {
+            println!("Error while creating the emulator: {e}");
+            return;
+        }
+        
+        let mut emu= emu_res.unwrap();
+        match cli.debug {
+            DebugMode::Full => {
+                UiLogger::init();
+                if let Err(e) = tui_main(emu) {
+                    println!("Error while starting emulator: {e}");
+                }
+                return;
+            }
+            DebugMode::None => {
+                let mut dbg = DummyDebugger::default();
+                loop {
+                    emu.tick(&mut dbg);
+                }
+            }
+            DebugMode::Log => {
+                println!("Starting emulator in log mode");
+                env_logger::init();
+                let mut dbg = LogDebugger::default();
+                loop {
+                    emu.tick(&mut dbg);
+                }
+            }
+        }
+    })
+}
+
 fn main() {
     let cli = Cli::parse();
     set_settings(&cli);
-    match cli.debug {
-        DebugMode::Full => {
-            UiLogger::init();
-            if let Err(e) = tui_main(cli.rom_path, cli.boot) {
-                println!("Error while starting emulator: {e}");
-            }
-            return;
-        }
-        DebugMode::None => {
-            let mut dbg = DummyDebugger::default();
-            let mut emu = Emulator::new(cli.rom_path, cli.boot).unwrap();
-            loop {
-                emu.tick(&mut dbg);
-            }
-        }
-        DebugMode::Log => {
-            println!("Starting emulator in log mode");
-            env_logger::init();
-            let mut dbg = LogDebugger::default();
-            let mut emu = Emulator::new(cli.rom_path, cli.boot).unwrap();
-            loop {
-                emu.tick(&mut dbg);
-            }
-        }
-    }
+    
+    let (tx_frame, rx_frame) : (Sender<Frame>, Receiver<Frame>) = bounded(2);
+    let joystate = Arc::new(AtomicU8::new(0));
+    
+    let worker = launch_worker(cli, tx_frame, joystate.clone());
+    
+    let _ = worker.join();
 }

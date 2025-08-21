@@ -1,6 +1,6 @@
-use std::ops::{BitAnd, BitOr, Not};
 use super::*;
-use crate::emulator::memory::RegDefines::*;
+use crate::emulator::memory::regdefines::*;
+use std::ops::{BitAnd, BitOr, Not};
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Interrupt {

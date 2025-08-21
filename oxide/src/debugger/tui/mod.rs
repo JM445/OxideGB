@@ -9,9 +9,6 @@ use super::full_debugger::*;
 use super::*;
 use crate::emulator::*;
 
-use std::collections::VecDeque;
-use std::path::Path;
-use std::io;
 use log::Level;
 use log::Level::Debug;
 use ratatui::{
@@ -21,6 +18,8 @@ use ratatui::{
     text::Line,
     widgets::{Block, Borders}
 };
+use std::collections::VecDeque;
+use std::io;
 
 use crate::debugger::dissassembler::CodeMap;
 use tui_textarea::{Input, TextArea};
@@ -107,8 +106,7 @@ impl<'a> Ui<'a> {
     }
 }
 
-pub fn tui_main<P: AsRef<Path>>(rom_path: P, boot_path: P) -> Result<(), String> {
-    let emu = Emulator::new(rom_path, boot_path)?;
+pub fn tui_main(emu: Emulator) -> Result<(), String> {
     let dbg =  FullDebugger::new(emu.cpu.pc);
     let mut ui = Ui::new(emu, dbg);
 

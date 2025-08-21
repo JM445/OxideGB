@@ -2,8 +2,14 @@ use super::memory::*;
 
 use crate::debugger::Debugger;
 
+pub const GB_W: usize = 160;
+pub const GB_H: usize = 144;
+pub const FB_LEN: usize = GB_W * GB_H;
+pub type Frame = Box<[u32]>; // RGBA8888
 #[derive(Debug, Default)]
-pub struct Ppu {}
+pub struct Ppu {
+    frame: Frame,
+}
 
 #[derive(Debug, Copy, Clone, PartialOrd, PartialEq, Eq, Hash)]
 pub enum Mode {
@@ -13,9 +19,19 @@ pub enum Mode {
     Mode3 = 3
 }
 impl Ppu {
+    pub fn new() -> Ppu {
+        Ppu{
+            frame: vec![0u32; FB_LEN].into_boxed_slice()
+        }
+    }
     pub fn tick<T>(&mut self, bus: &mut Bus, dbg: &mut T)
     where T: Debugger {
         ()
+    }
+    
+    fn send_frame(&mut self, bus: &mut Bus) {
+        let cur = std::mem::replace(&mut self.frame, vec![0u32; FB_LEN].into_boxed_slice());
+        bus.send_frame(cur);
     }
 }
 

@@ -19,11 +19,11 @@ use crate::emulator::memory::Bus;
 
 use std::collections::VecDeque;
 
+use crate::emu_print;
+use crate::emulator::memory::regdefines::*;
+use crate::settings::GLOB_SETTINGS;
 #[allow(unused_imports)]
 use log::{debug, error, info, warn};
-use crate::emu_print;
-use crate::emulator::memory::RegDefines::*;
-use crate::settings::GLOB_SETTINGS;
 
 #[derive(Debug)]
 pub struct Cpu {

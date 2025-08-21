@@ -2,7 +2,7 @@ pub mod cartridge;
 pub mod ram;
 pub mod serial;
 
-pub mod RegDefines;
+pub mod regdefines;
 mod ioregs;
 
 use cartridge::*;
@@ -13,11 +13,12 @@ use std::hash::{DefaultHasher, Hash, Hasher};
 #[allow(unused_imports)]
 use log::{debug, info, warn};
 
-use std::path::Path;
-use crate::emulator::memory::RegDefines::STAT;
+use crate::emulator::internals::iomanager::IoManager;
+use crate::emulator::memory::regdefines::STAT;
 use crate::emulator::ppu;
-use crate::emulator::ppu::Mode;
+use crate::emulator::ppu::{Frame, Mode};
 use crate::settings::GLOB_SETTINGS;
+use std::path::Path;
 
 pub struct Bus {
     pub cartridge: AnyCartridge,
@@ -27,6 +28,7 @@ pub struct Bus {
     pub boot_enabled: bool,
     
     pub div_written: bool,
+    pub io_manager: IoManager,
 }
 
 #[derive(Debug, Copy, Clone, PartialOrd, PartialEq, Eq, Hash)]
@@ -82,7 +84,7 @@ impl<'a> Iterator for BusIter<'a> {
 }
 
 impl Bus {
-    pub fn new<P: AsRef<Path>>(rom_path: P, boot_path: P) -> Result<Self, String> {
+    pub fn new<P: AsRef<Path>>(rom_path: P, boot_path: P, io_manager: IoManager) -> Result<Self, String> {
         let raw = fs::read(boot_path);
         let boot_rom : [u8; 256];
         let boot_enabled : bool;
@@ -110,6 +112,7 @@ impl Bus {
             boot_enabled,
             
             div_written: false,
+            io_manager,
         })
     }
 
@@ -244,5 +247,9 @@ impl Bus {
         }
 
         block1 == block2
+    }
+    
+    pub fn send_frame(&mut self, frame: Frame) {
+        self.io_manager.send_frame(frame);
     }
 }

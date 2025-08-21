@@ -1,5 +1,3 @@
-use super::*;
-
 /* Joypad */
 pub const P1: u16   = 0xFF00;
 pub const JOYP: u16 = 0xFF00;

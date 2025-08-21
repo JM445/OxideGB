@@ -1,14 +1,15 @@
-use log::debug;
+use crate::emulator::memory::regdefines::*;
 use crate::emulator::memory::Bus;
-use crate::emulator::memory::RegDefines::*;
 use crate::emulator::ppu::Mode;
 use crate::settings::GLOB_SETTINGS;
+use log::debug;
 
 impl Bus {
     #[allow(unused_variables, dead_code)]
     pub(super) fn read_regs(&self, addr: u16) -> u8 {
         match addr {
-            0xFF44 | 0xFF02 => {
+            JOYP => self.read_joyp(),
+            LY | SC => {
                 if GLOB_SETTINGS.get().unwrap().doctor_logs {0x90} else {0xFF}
             }, // Temporary values to run Mooneye and GB Doctor
             STAT => {
@@ -27,6 +28,7 @@ impl Bus {
     #[allow(unused_variables, dead_code)]
     pub(super) fn write_regs(&mut self, addr: u16, value: u8) {
         match addr {
+            JOYP => self.write_joyp(value),
             BANK => self.boot_enabled = false,
             DIV => {
                 debug!("DIV Register written. Resetting counter to 0.");
@@ -39,11 +41,10 @@ impl Bus {
             }
             STAT => self.ioregs[0x41] = (value & 0b11111100) | (self.ioregs[0x41] & 0b11), 
             0xFF00..0xFF80 => self.ioregs[addr as usize - 0xFF00] = value,
-            0xFFFF => self.ioregs[0x7F] = value,
+            IE => self.ioregs[0x7F] = value,
             _ => ()
         }
     }
-
 
     pub fn get_ppu_mode(&self) -> Mode {
         match self.read_regs(STAT) & 0b11 {
@@ -53,5 +54,23 @@ impl Bus {
             3 => Mode::Mode3,
             _ => panic!("Unreachable")
         }
+    }
+    
+    fn read_joyp(&self) -> u8 {
+        let joystate = self.io_manager.get_joystate();
+        let sel = self.read(JOYP) & 0x30;             // Get Register selection bits
+        let buttons = (sel & 0b0010_0000) == 0;     // Is buttons selected
+        let dpad = (sel & 0b0001_0000) == 0;        // Is DPad selected
+        let mut result: u8 = 0;
+
+        if buttons {result |=  joystate       & 0xF}
+        if dpad    {result |= (joystate >> 4) & 0xF}
+
+        ((!result) & 0xF) | sel | 0xC0                    // Recompute the register
+    }
+    
+    fn write_joyp(&mut self, value: u8) {
+        let old = self.ioregs[0x00] & 0b11001111;
+        self.ioregs[0x00] = old | (value & 0b00110000);
     }
 }

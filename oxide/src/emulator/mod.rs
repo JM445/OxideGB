@@ -2,9 +2,8 @@ pub mod memory;
 pub mod ppu;
 
 pub mod cpu;
-mod internals;
+pub mod internals;
 
-use log::info;
 use cpu::*;
 use memory::*;
 use ppu::*;
@@ -12,10 +11,11 @@ use ppu::*;
 use crate::debugger::*;
 
 
-use std::path::Path;
 use crate::emu_print;
+use crate::emulator::internals::iomanager::IoManager;
 use crate::emulator::internals::timer::Timer;
 use crate::settings::GLOB_SETTINGS;
+use std::path::Path;
 
 pub struct Emulator {
     pub cpu: Cpu,
@@ -28,8 +28,8 @@ pub struct Emulator {
 }
 
 impl Emulator {
-    pub fn new<P: AsRef<Path>>(rom_path: P, boot_path: P) -> Result<Self, String> {
-        let bus = Bus::new(rom_path, boot_path)?;
+    pub fn new<P: AsRef<Path>>(rom_path: P, boot_path: P, io_manager: IoManager) -> Result<Self, String> {
+        let bus = Bus::new(rom_path, boot_path, io_manager)?;
         let cpu = if bus.boot_enabled {
             Cpu::new_boot()
         } else {
