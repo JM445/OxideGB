@@ -1,6 +1,7 @@
 pub mod emulator;
 pub mod debugger;
 mod settings;
+mod gui;
 
 use crate::debugger::tui::ui_logger::UiLogger;
 use crate::debugger::*;
