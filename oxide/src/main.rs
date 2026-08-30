@@ -17,6 +17,8 @@ use debugger::DummyDebugger;
 use std::fmt;
 use std::sync::atomic::AtomicU8;
 use std::sync::Arc;
+use log::error;
+use crate::gui::start_gui;
 
 #[macro_export]
 macro_rules! emu_print {
@@ -142,5 +144,9 @@ fn main() {
     
     let worker = launch_worker(cli, tx_frame, joystate.clone());
     
-    let _ = worker.join();
+    if let Err(e) = start_gui(rx_frame, joystate) {
+        error!("SDL Error: {e}");
+    }
+    
+//    let _ = worker.join();
 }

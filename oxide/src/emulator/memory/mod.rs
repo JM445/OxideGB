@@ -1,6 +1,6 @@
 pub mod cartridge;
 pub mod ram;
-pub mod serial;
+pub mod interrupts;
 
 pub mod regdefines;
 mod ioregs;
@@ -29,6 +29,8 @@ pub struct Bus {
     
     pub div_written: bool,
     pub io_manager: IoManager,
+    
+    last_stat: bool // Previous tick stat line status
 }
 
 #[derive(Debug, Copy, Clone, PartialOrd, PartialEq, Eq, Hash)]
@@ -113,6 +115,8 @@ impl Bus {
             
             div_written: false,
             io_manager,
+            
+            last_stat: false,
         })
     }
 
@@ -156,7 +160,7 @@ impl Bus {
             _ => 0xFF
         }
     }
-
+    
     pub fn write(&mut self, addr: u16, value: u8) {
         #[cfg(feature = "log_mem_access")]
         debug!("Memory write: 0x{:#04X} => 0x{:#06X}", value, addr);

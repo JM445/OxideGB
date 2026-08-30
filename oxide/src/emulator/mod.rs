@@ -43,7 +43,7 @@ impl Emulator {
         Ok(Emulator{
             cpu,
             bus,
-            ppu: Default::default(),
+            ppu: Ppu::new(),
             timer: Timer::default(),
             
             ticks: 0

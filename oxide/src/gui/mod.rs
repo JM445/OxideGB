@@ -1,12 +1,15 @@
 use std::sync::Arc;
 use std::sync::atomic::AtomicU8;
+use std::time::Duration;
 use crossbeam_channel::Receiver;
 use sdl3::{Sdl, VideoSubsystem};
 use sdl3::render::{Canvas, TextureCreator, WindowCanvas, Texture};
 use sdl3::video::{Window, WindowContext};
 use crate::emulator::ppu::Frame;
-use image::GenericImageView;
+use sdl3::event::Event;
+use sdl3::keyboard::Keycode;
 use sdl3::pixels::PixelFormatEnum;
+use sdl3::rect::Rect;
 
 const BG_BYTES : &[u8] = include_bytes!("../../assets/dmg_background.png");
 const BG_W : u32 = 311;
@@ -15,15 +18,24 @@ const SCR_W : u32 = 160;
 const SCR_H : u32 = 144;
 const SCR_X : i32 = 75;
 const SCR_Y : i32 = 70;
-pub struct Sdl_Ui {
+
+
+pub struct UiRenderer {
     pub sdl: Sdl,
     pub video: VideoSubsystem,
     pub canvas: WindowCanvas,
     pub tex_creator: TextureCreator<WindowContext>,
 }
 
-impl Sdl_Ui {
-    pub fn new() -> Result<Sdl_Ui, Box<dyn std::error::Error>> {
+pub struct UiAssets<'tc> {
+    pub bg_text: Texture<'tc>,
+    pub frame_text: Texture<'tc>,
+    
+    pub screen_pos: Rect,
+}
+
+impl UiRenderer {
+    pub fn new() -> Result<UiRenderer, Box<dyn std::error::Error>> {
         let sdl = sdl3::init()?;
         let video = sdl.video()?;
         let window = video.window("OxideGB", 311, 276)
@@ -32,56 +44,86 @@ impl Sdl_Ui {
         let canvas = window.into_canvas();
         let tex_creator = canvas.texture_creator();
 
-        Ok(Sdl_Ui {
+        Ok(UiRenderer {
             sdl, video, canvas, tex_creator
         })
     }
+}
 
-    fn get_bg_texture(&mut self) -> Result<Texture, Box<dyn std::error::Error>> {
+impl<'tc> UiAssets<'tc> {
+    pub fn new(creator: &'tc TextureCreator<WindowContext>) -> Result<Self, Box<dyn std::error::Error>> {
         let bg_image = image::load_from_memory(BG_BYTES)?.to_rgba8();
-        let mut bg_tex = self.tex_creator.create_texture_streaming(
+        let mut bg_text = creator.create_texture_streaming(
             Some(PixelFormatEnum::ABGR8888.into()), BG_W, BG_H)?;
-        bg_tex.set_blend_mode(sdl3::render::BlendMode::Blend);
+        bg_text.set_blend_mode(sdl3::render::BlendMode::Blend);
 
-        bg_tex.with_lock(None, |buf, pitch | {
+        bg_text.with_lock(None, |buf, pitch | {
             let src = bg_image.as_raw();
 
             for y in 0..BG_H as usize {
                 let src_row = &src[y * (BG_W as usize) * 4 .. (y + 1) * (BG_W as usize) * 4];
-                let dst_row = &mut buf[y * pitch as usize .. y * pitch as usize + (BG_W as usize) * 4];
+                let dst_row = &mut buf[y * pitch.. y * pitch + (BG_W as usize) * 4];
                 dst_row.copy_from_slice(src_row);
             }
         })?;
-        Ok(bg_tex)
+
+        let frame_text = creator.create_texture_streaming(
+            Some(PixelFormatEnum::ARGB8888.into()), SCR_W, SCR_H)?;
+        Ok(Self {
+            bg_text,
+            frame_text,
+            screen_pos: Rect::new(SCR_X, SCR_Y, SCR_W, SCR_H),
+        })
     }
     
+    pub fn write_frame(&mut self, frame: &Frame) -> Result<(), Box<dyn std::error::Error>>{
+        self.frame_text.with_lock(None, |buf, pitch| {
+            for y in 0..SCR_H as usize {
+                let row = &frame[y * SCR_W as usize .. (y + 1) * SCR_W as usize];
+                let dst = &mut buf[y * pitch as usize .. y * pitch as usize + (SCR_W as usize) * 4];
+
+                for (x, &px) in row.iter().enumerate() {
+                    let r = ((px >> 16) & 0xFF) as u8;
+                    let g = ((px >>  8) & 0xFF) as u8;
+                    let b = ( px        & 0xFF) as u8;
+                    let i = x * 4;
+                    // ARGB8888 (little-endian) expects BGRA bytes here:
+                    dst[i + 0] = b;
+                    dst[i + 1] = g;
+                    dst[i + 2] = r;
+                    dst[i + 3] = 0xFF;
+                }
+            }
+        })?;
+        Ok(())
+    }
 }
 
-fn write_frame(tex: &mut Texture, frame: &Frame) {
-    tex.with_lock(None, |buf, pitch| {
-        for y in 0..SCR_H as usize {
-            let row = &frame[y * SCR_W as usize .. (y + 1) * SCR_W as usize];
-            let dst = &mut buf[y * pitch as usize .. y * pitch as usize + (SCR_W as usize) * 4];
-
-            for (x, &px) in row.iter().enumerate() {
-                let r = ((px >> 16) & 0xFF) as u8;
-                let g = ((px >>  8) & 0xFF) as u8;
-                let b = ( px        & 0xFF) as u8;
-                let i = x * 4;
-                // ARGB8888 (little-endian) expects BGRA bytes here:
-                dst[i + 0] = b;
-                dst[i + 1] = g;
-                dst[i + 2] = r;
-                dst[i + 3] = 0xFF;
+pub fn start_gui(rx_frame: Receiver<Frame>, joystate: Arc<AtomicU8>) -> Result<(), Box<dyn std::error::Error>> {
+    let mut ui = UiRenderer::new()?;
+    let mut assets = UiAssets::new(&ui.tex_creator)?;
+    let mut event_pump = ui.sdl.event_pump()?;
+    'main: loop {
+        for event in event_pump.poll_iter() {
+            match event {
+                Event::Quit { .. } => break 'main,
+                Event::KeyDown {
+                    keycode: Some(Keycode::Escape), ..
+                } => break 'main,
+                _ => {}
             }
         }
-    }).unwrap();
-}
 
-pub fn start_gui(rx_frame: Receiver<Frame>, joystate: Arc<AtomicU8>) {
-    let mut ui = Sdl_Ui::new().unwrap();
-    let scren_text = ui.tex_creator.create_texture_streaming(
-        Some(PixelFormatEnum::ARGB8888.into()), SCR_W, SCR_H);
-    let bg_text = ui.get_bg_texture().unwrap();
+        if let Ok(frame) = rx_frame.try_recv() {
+            assets.write_frame(&frame)?;
+        }
+
+        ui.canvas.clear();
+        ui.canvas.copy(&assets.frame_text, None, assets.screen_pos)?;
+        ui.canvas.copy(&assets.bg_text, None, None)?;
+        ui.canvas.present();
         
+        std::thread::sleep(Duration::from_millis(5));
+    }
+    Ok(())
 }

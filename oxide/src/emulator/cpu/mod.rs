@@ -50,6 +50,7 @@ pub struct Cpu {
     
     prefix: bool,  // Was the last decoded instruction the 0xCB prefix ?
     ei_next: bool, // Is an EI scheduled for next cycle ?
+    
     next_ops: VecDeque<MicroOp>,
     cond_ops: VecDeque<MicroOp>,
 }

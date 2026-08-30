@@ -9,9 +9,10 @@ impl Bus {
     pub(super) fn read_regs(&self, addr: u16) -> u8 {
         match addr {
             JOYP => self.read_joyp(),
-            LY | SC => {
+            SC => {
                 if GLOB_SETTINGS.get().unwrap().doctor_logs {0x90} else {0xFF}
             }, // Temporary values to run Mooneye and GB Doctor
+            LY => self.ioregs[0x44],
             STAT => {
                 let mut val: u8 = self.ioregs[0x41];
                 if self.ioregs[0x40] & 0b10000000 == 0 {
@@ -39,10 +40,34 @@ impl Bus {
                 debug!("SC Written. Value: {value}.");
                 self.ioregs[addr as usize - 0xFF00] = value;
             }
-            STAT => self.ioregs[0x41] = (value & 0b11111100) | (self.ioregs[0x41] & 0b11), 
+            STAT => self.ioregs[0x41] = (value & 0b11111100) | (self.ioregs[0x41] & 0b11),
+            LY => (),
+            LYC => {
+                self.ioregs[0x45] = value;
+                self.update_stat();
+            }
             0xFF00..0xFF80 => self.ioregs[addr as usize - 0xFF00] = value,
             IE => self.ioregs[0x7F] = value,
             _ => ()
+        }
+    }
+    
+    /* Write a value to an IoRegister without computing its value, even for non-writeable registers */
+    pub fn set_regs(&mut self, addr: u16, value: u8) {
+        match addr {
+            LY => {
+                self.ioregs[0x44] = value;
+                self.update_stat();
+            },
+            IE => self.ioregs[0x7F] = value,
+            _ => panic!("Not implemented register set !")
+        }
+    }
+    
+    fn update_stat(&mut self) {
+        if self.ioregs[0x44] == self.ioregs[0x45] { // Set LY = LYC bit if needed
+            let stat = self.read(STAT);
+            self.write(STAT, stat | 0b0100)
         }
     }
 
