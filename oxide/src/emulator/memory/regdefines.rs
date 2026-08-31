@@ -21,5 +21,12 @@ pub const LCDC: u16 = 0xFF40;
 pub const STAT: u16 = 0xFF41;
 pub const LY: u16   = 0xFF44;
 pub const LYC: u16  = 0xFF45;
+
+/* Palette */
+
+pub const BGP: u16 = 0xFF47;
+pub const OBP0: u16 = 0xFF48;
+pub const OBP1: u16 = 0xFF49;
+
 /* Misc */
 pub const BANK: u16 = 0xFF50;

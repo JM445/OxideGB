@@ -13,6 +13,7 @@ use crate::emulator::ppu::*;
 
 #[allow(unused_imports)]
 use log::{debug, error, info, warn};
+use crate::emulator::ppu::pixels::Sprite;
 
 pub trait Debugger {
     fn on_cpu_event(&mut self, event: DebugEvent, cpu: &Cpu, bus: &Bus);
@@ -28,11 +29,16 @@ pub enum DebuggerKind {
 
 #[derive(Debug, Copy, Clone)]
 pub enum DebugEvent {
+    // CPU Events
     MicroOpEnd(MicroOp),
     InstructionEnd(u8),
     IrPrefetch(u8, u16),
     Register8Change(Reg8, u8),
     Register16Change(Reg16, u16),
+    
+    // PPU Events
+    PpuModeChanged(Mode),
+    SpriteScanned(Sprite),
 }
 
 
