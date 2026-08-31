@@ -12,9 +12,9 @@ use crate::emulator::memory::regdefines::*;
 use crate::emulator::ppu::pixels::*;
 use crate::emulator::ppu::fetcher::*;
 
-pub const GB_W: usize = 160;
-pub const GB_H: usize = 144;
-pub const FB_LEN: usize = GB_W * GB_H;
+pub const GB_W: u8 = 160;
+pub const GB_H: u8 = 144;
+pub const FB_LEN: usize = GB_W as usize * GB_H as usize;
 pub type Frame = Box<[GBColor]>;
 #[derive(Debug, Default)]
 pub struct Ppu {
@@ -23,7 +23,7 @@ pub struct Ppu {
     mode_dot: usize,
 
     pixel_fetcher: PixelFetcher,
-    next_x: usize,
+    next_x: u8,
 }
 
 #[derive(Debug, Copy, Clone, PartialOrd, PartialEq, Eq, Hash)]
@@ -91,7 +91,7 @@ impl Ppu {
     where T: Debugger {
         if let Some(pixel) = self.pixel_fetcher.tick(self.next_x, bus, dbg) {
             let ly = bus.read(LY) as usize;
-            self.frame[ly * GB_W + self.next_x] = pixel;
+            self.frame[ly * GB_W as usize + self.next_x as usize] = pixel;
             self.next_x += 1;
         }
     }

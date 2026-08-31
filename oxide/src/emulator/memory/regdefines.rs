@@ -21,6 +21,8 @@ pub const LCDC: u16 = 0xFF40;
 pub const STAT: u16 = 0xFF41;
 pub const LY: u16   = 0xFF44;
 pub const LYC: u16  = 0xFF45;
+pub const WY: u16 = 0xFF4A;
+pub const WX: u16 = 0xFF4B;
 
 /* Palette */
 

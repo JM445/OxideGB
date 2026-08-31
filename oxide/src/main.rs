@@ -7,7 +7,8 @@ use crate::debugger::tui::ui_logger::UiLogger;
 use crate::debugger::*;
 use crate::emulator::*;
 
-use self::settings::*;
+use self::settings::GLOB_SETTINGS;
+use self::settings::Settings;
 use crate::emulator::internals::iomanager::IoManager;
 use crate::emulator::ppu::Frame;
 use clap::{Parser, ValueEnum};
@@ -90,12 +91,11 @@ fn set_settings(cli: &Cli) {
         DebugMode::Full => true,
         _ => false,
     };
-    
-    GLOB_SETTINGS.set(Arc::new(Settings {
-        print_serial: cli.serial_print,
-        tui_enabled,
-        doctor_logs: cli.doctor_log
-    })).expect("Settings already initialized !");
+    let mut settings= Settings::default();
+    settings.doctor_logs = cli.doctor_log;
+    settings.print_serial = cli.serial_print;
+    settings.tui_enabled = tui_enabled;
+    GLOB_SETTINGS.set(Arc::new(settings)).expect("Settings already initialized !");
 }
 
 fn launch_worker(cli: Cli, tx_frame: Sender<Frame>, joystate: Arc<AtomicU8>) -> std::thread::JoinHandle<()> {

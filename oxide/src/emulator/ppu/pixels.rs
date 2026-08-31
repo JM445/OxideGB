@@ -26,7 +26,7 @@ pub enum GBColor {
     LGREY = 0b01,
     DGREY = 0b10,
     BLACK = 0b11,
-    OFF
+    OFF = 0b100
 }
 
 impl From<u8> for GBColor {

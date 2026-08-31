@@ -10,6 +10,7 @@ use sdl3::event::Event;
 use sdl3::keyboard::Keycode;
 use sdl3::pixels::PixelFormatEnum;
 use sdl3::rect::Rect;
+use crate::settings::GLOB_SETTINGS;
 
 const BG_BYTES : &[u8] = include_bytes!("../../assets/dmg_background.png");
 const BG_W : u32 = 311;
@@ -83,9 +84,11 @@ impl<'tc> UiAssets<'tc> {
                 let dst = &mut buf[y * pitch as usize .. y * pitch as usize + (SCR_W as usize) * 4];
 
                 for (x, &px) in row.iter().enumerate() {
-                    let r = ((px >> 16) & 0xFF) as u8;
-                    let g = ((px >>  8) & 0xFF) as u8;
-                    let b = ( px        & 0xFF) as u8;
+                    let colors = &GLOB_SETTINGS.get().unwrap().colors;
+                    let cur_color = colors[px as usize];
+                    let r = ((cur_color >> 16) & 0xFF) as u8;
+                    let g = ((cur_color >>  8) & 0xFF) as u8;
+                    let b = ( cur_color        & 0xFF) as u8;
                     let i = x * 4;
                     // ARGB8888 (little-endian) expects BGRA bytes here:
                     dst[i + 0] = b;

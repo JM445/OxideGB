@@ -21,7 +21,12 @@ pub struct PixelFetcher {
     line_sprites: VecDeque<Sprite>,
 
     dot: u8,
-    state: FetchState
+    state: FetchState,
+    fetching_obj: bool,
+    fetching_x: u8,
+    fetching_id: u8,
+    fetching_low: u8,
+    fetching_high: u8
 }
 
 impl PixelFetcher {
@@ -32,7 +37,12 @@ impl PixelFetcher {
             obj_fifo: VecDeque::new(),
             line_sprites: VecDeque::new(),
             dot: 0,
-            state: FetchState::TILE
+            state: FetchState::TILE,
+            fetching_obj: false,
+            fetching_x: 0, // Currently fetched tile left-most position, different from currently drawn pixel
+            fetching_id: 0,
+            fetching_low: 0,
+            fetching_high: 0,
         }
     }
     pub fn add_sprite(&mut self, sprite: Sprite) {
@@ -70,12 +80,34 @@ impl PixelFetcher {
         }
     }
 
-    pub fn tick<T>(&mut self, pixel_x: usize, bus: &mut Bus, dbg: &mut T) -> Option<GBColor>
+    // Get the tile ID of the currently fetched BG or Window tile (fetcher not in obj mode)
+    fn get_bg_tile_id(&mut self, bus: &Bus) -> u8 {
+        let lcdc = bus.read(LCDC);
+        let ly = bus.read(LY);
+        let window_enabled = lcdc & 0b100000 != 0;
+        let window_map_address = if lcdc & 0b1000000 == 0 {0x9800} else {0x9C00};
+        let bg_map_address = if lcdc & 0b1000 == 0 {0x9800} else {0x9C00};
+        let is_in_window = self.fetching_x >= bus.read(WX) - 7 && ly >= bus.read(WY);
+
+        if window_enabled && is_in_window {
+
+        } else {}
+        0x00
+    }
+
+    pub fn tick<T>(&mut self, pixel_x: u8, bus: &mut Bus, dbg: &mut T) -> Option<GBColor>
     where T: Debugger {
         if self.dot % 2 == 0 {
-
+            match (self.state, self.fetching_obj) {
+                (FetchState::TILE, false) => {
+                    self.fetching_id = self.get_bg_tile_id(bus);
+                    self.state = FetchState::LOW;
+                },
+                _ => ()
+            }
         }
 
+        self.dot += 1;
         self.render_pixel(bus)
     }
 }
