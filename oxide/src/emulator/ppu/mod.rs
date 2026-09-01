@@ -107,11 +107,12 @@ impl Ppu {
         bus.set_ppu_mode(mode);
         match mode {
             Mode::Mode2 => {
-                self.pixel_fetcher.reset();
+                self.pixel_fetcher.reset_line();
                 self.next_x = 0;
             },
             Mode::Mode1 => {
                 bus.set_interrupt(Interrupt::VBlank);
+                self.pixel_fetcher.reset_frame();
             },
             _ => ()
         }

@@ -22,13 +22,19 @@ pub struct PixelFetcher {
 
     dot: u8,
     state: FetchState,
+    wait_for_obj: bool,
     fetching_obj: bool,
+    fetching_win: bool,
+
     fetching_id: u8,
     fetching_low: u8,
     fetching_high: u8,
 
-    bg_fetch_x: u8,
-    win_fetch_x: u8,
+    bg_fetch_x: u8,     // bg tile x offset for the current scanline
+    win_fetch_x: u8,    // win tile x offset for the current scanline
+
+    wly: u8,            // Reached row in Window (in pixels)
+    win_drawn: bool,    // A window pixel has been pushed to FIFO this scanline
 }
 
 impl PixelFetcher {
@@ -40,21 +46,44 @@ impl PixelFetcher {
             line_sprites: VecDeque::new(),
             dot: 0,
             state: FetchState::TILE,
+            wait_for_obj: false,
             fetching_obj: false,
-            fetching_x: 0, // Currently fetched tile left-most position, different from currently drawn pixel
+            fetching_win: false,
+
             fetching_id: 0,
             fetching_low: 0,
             fetching_high: 0,
+
+            bg_fetch_x: 0,
+            win_fetch_x: 0,
+
+            wly: 0,
+            win_drawn: false,
         }
     }
     pub fn add_sprite(&mut self, sprite: Sprite) {
         self.line_sprites.push_back(sprite)
     }
 
-    pub fn reset(&mut self) {
+    pub fn reset_line(&mut self) {
         self.bg_fifo.clear();
         self.obj_fifo.clear();
         self.line_sprites.clear();
+        self.dot = 0;
+        self.state = FetchState::TILE;
+        self.wait_for_obj = false;
+        self.fetching_obj = false;
+        self.fetching_id = 0;
+        self.fetching_low = 0;
+        self.fetching_high = 0;
+        self.bg_fetch_x = 0;
+        self.win_fetch_x = 0;
+        self.win_drawn = false;
+    }
+
+    pub fn reset_frame(&mut self) {
+        self.wly = 0;
+        self.reset_line();
     }
 
     pub fn render_pixel(&mut self, bus: &Bus) -> Option<GBColor> {
@@ -83,33 +112,88 @@ impl PixelFetcher {
     }
 
     // Get the tile ID of the currently fetched BG or Window tile (fetcher not in obj mode)
-    fn get_bg_tile_id(&mut self, bus: &Bus) -> u8 {
+    fn get_tile_id(&mut self, bus: &Bus) -> u8 {
         let lcdc = bus.read(LCDC);
-        let ly = bus.read(LY);
-        let window_enabled = lcdc & 0b100000 != 0;
-        let window_map_address = if lcdc & 0b1000000 == 0 {0x9800} else {0x9C00};
-        let bg_map_address = if lcdc & 0b1000 == 0 {0x9800} else {0x9C00};
-        let is_in_window = self.fetching_x + 7 >= bus.read(WX) && ly >= bus.read(WY);
 
-        if window_enabled && is_in_window {
-
-        } else {}
-        0x00
+        if self.fetching_obj {
+            0x00 // TODO: Implement real sprite fetching
+        } else if self.fetching_win {
+            let row = ((self.wly / 8) % 32) as u16;
+            let col = (self.win_fetch_x % 32) as u16;
+            let win_map_address = if lcdc & 0b1000000 != 0 {0x9C00} else {0x9800};
+            bus.read(win_map_address + (row * 32) + col)
+        } else {
+            let row = ((bus.read(SCY) as u16 + bus.read(LY) as u16) / 8) % 32;
+            let col = (((bus.read(SCX) / 8) + self.bg_fetch_x) % 32) as u16;
+            let bg_map_address = if lcdc & 0b1000 != 0 {0x9C00} else {0x9800};
+            bus.read(bg_map_address + (row* 32) + col)
+        }
     }
 
     pub fn tick<T>(&mut self, pixel_x: u8, bus: &mut Bus, dbg: &mut T) -> Option<GBColor>
     where T: Debugger {
+        let lcdc = bus.read(LCDC);
+        let ly = bus.read(LY);
+        let window_enabled = lcdc & 0b100000 != 0;
+        let next_sprite_x = if let Some(s) = self.line_sprites.front() {
+            s.x
+        } else {
+            255 // pixel_x should never go that high
+        };
+
+        // Did we reach the window ? If yes, clear the fifo and reset the fetcher
+        if window_enabled && !self.fetching_win && pixel_x + 7 >= bus.read(WX) && ly >= bus.read(WY) {
+            self.fetching_win = true;
+            self.bg_fifo.clear();
+            self.state = FetchState::TILE;
+            self.dot = 0;
+            self.win_fetch_x = 0;
+        }
+
+        // Did we reach a sprite ? If yes, wait for fetch end before switching to obj fetching
+        // Source: https://www.reddit.com/r/EmuDev/comments/s6cpis/gameboy_trying_to_understand_sprite_fifo_behavior/
+        // Commented for now, I will try to have a working background/window rendering first.
+        // if next_sprite_x <= pixel_x + 8 && !self.fetching_obj && !self.wait_for_obj {
+        //     self.wait_for_obj = true;
+        //     self.ready = false;
+        // }
+        //
+        // if self.wait_for_obj && self.state == FetchState::TILE {
+        //     self.wait_for_obj = false;
+        //     self.fetching_obj = true;
+        // }
+
         if self.dot % 2 == 0 {
-            match (self.state, self.fetching_obj) {
-                (FetchState::TILE, false) => {
-                    self.fetching_id = self.get_bg_tile_id(bus);
+            match self.state {
+                FetchState::TILE => {
+                    self.fetching_id = self.get_tile_id(bus);
                     self.state = FetchState::LOW;
                 },
+
+                FetchState::PUSH => {
+                    if !self.fetching_obj && self.bg_fifo.is_empty() {
+                        // TODO: self.bg_fifo.push_back(something)
+                        if self.fetching_win {
+                            self.win_fetch_x += 1;
+                        } else {
+                            self.bg_fetch_x += 1;
+                        }
+                        self.state = FetchState::TILE;
+                    } else if self.fetching_obj {
+                        // TODO
+                        self.state = FetchState::TILE;
+                    }
+                }
                 _ => ()
             }
         }
 
+        if self.bg_fifo.is_empty() {
+            self.ready = false;
+        }
         self.dot += 1;
-        self.render_pixel(bus)
+        let res = self.render_pixel(bus);
+
+        res
     }
 }
