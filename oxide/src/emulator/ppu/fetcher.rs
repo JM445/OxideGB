@@ -23,10 +23,12 @@ pub struct PixelFetcher {
     dot: u8,
     state: FetchState,
     fetching_obj: bool,
-    fetching_x: u8,
     fetching_id: u8,
     fetching_low: u8,
-    fetching_high: u8
+    fetching_high: u8,
+
+    bg_fetch_x: u8,
+    win_fetch_x: u8,
 }
 
 impl PixelFetcher {
@@ -87,7 +89,7 @@ impl PixelFetcher {
         let window_enabled = lcdc & 0b100000 != 0;
         let window_map_address = if lcdc & 0b1000000 == 0 {0x9800} else {0x9C00};
         let bg_map_address = if lcdc & 0b1000 == 0 {0x9800} else {0x9C00};
-        let is_in_window = self.fetching_x >= bus.read(WX) - 7 && ly >= bus.read(WY);
+        let is_in_window = self.fetching_x + 7 >= bus.read(WX) && ly >= bus.read(WY);
 
         if window_enabled && is_in_window {
 
