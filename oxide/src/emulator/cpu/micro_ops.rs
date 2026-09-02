@@ -8,7 +8,6 @@ use log::{debug, error, info, warn};
 use crate::emulator::memory::Bus;
 
 use super::*;
-use super::interrupt::*;
 
 use std::num::Wrapping;
 
@@ -159,7 +158,6 @@ impl Cpu {
 
     fn alu_sub(left: Wrapping<u16>, right: Wrapping<u16>, carry: Wrapping<u16>) -> (u16, u8) {
         let res = left - right - carry;
-        let borrow = right + carry;
 
         (res.0,
         ((((res.0 & 0xFF) == 0) as u8) << 3) |                       // Z
@@ -538,7 +536,6 @@ impl Cpu {
         };
 
         let test = check(val);
-        debug!{"Condition {cc}: {test}"};
         if test {
             self.next_ops.append(&mut self.cond_ops)
         } else {

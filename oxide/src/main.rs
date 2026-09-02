@@ -142,11 +142,9 @@ fn main() {
     let (tx_frame, rx_frame) : (Sender<Frame>, Receiver<Frame>) = bounded(2);
     let joystate = Arc::new(AtomicU8::new(0));
     
-    let worker = launch_worker(cli, tx_frame, joystate.clone());
-    
+    let _ = launch_worker(cli, tx_frame, joystate.clone());
+
     if let Err(e) = start_gui(rx_frame, joystate) {
         error!("SDL Error: {e}");
     }
-    
-//    let _ = worker.join();
 }

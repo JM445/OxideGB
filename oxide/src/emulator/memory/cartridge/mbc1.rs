@@ -64,7 +64,7 @@ impl Mbc for Mbc1 {
         }
     }
 
-    fn is_writeable(&self, addr: u16) -> bool {
+    fn is_writeable(&self, _addr: u16) -> bool {
         let bank = self.ram_bank & 0b11;
         bank < self.ram_bank
     }

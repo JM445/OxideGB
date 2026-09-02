@@ -3,8 +3,8 @@ use std::sync::atomic::AtomicU8;
 use std::time::Duration;
 use crossbeam_channel::Receiver;
 use sdl3::{Sdl, VideoSubsystem};
-use sdl3::render::{Canvas, TextureCreator, WindowCanvas, Texture};
-use sdl3::video::{Window, WindowContext};
+use sdl3::render::{TextureCreator, WindowCanvas, Texture};
+use sdl3::video::WindowContext;
 use crate::emulator::ppu::Frame;
 use sdl3::event::Event;
 use sdl3::keyboard::Keycode;
@@ -23,6 +23,7 @@ const SCR_Y : i32 = 70;
 
 pub struct UiRenderer {
     pub sdl: Sdl,
+    #[allow(dead_code)]
     pub video: VideoSubsystem,
     pub canvas: WindowCanvas,
     pub tex_creator: TextureCreator<WindowContext>,
@@ -102,7 +103,7 @@ impl<'tc> UiAssets<'tc> {
     }
 }
 
-pub fn start_gui(rx_frame: Receiver<Frame>, joystate: Arc<AtomicU8>) -> Result<(), Box<dyn std::error::Error>> {
+pub fn start_gui(rx_frame: Receiver<Frame>, _joystate: Arc<AtomicU8>) -> Result<(), Box<dyn std::error::Error>> {
     let mut ui = UiRenderer::new()?;
     let mut assets = UiAssets::new(&ui.tex_creator)?;
     let mut event_pump = ui.sdl.event_pump()?;

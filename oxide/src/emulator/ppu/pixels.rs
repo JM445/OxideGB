@@ -1,17 +1,12 @@
-use std::collections::VecDeque;
-use image::buffer::PixelsMut;
-use crate::debugger::Debugger;
 use crate::emulator::memory::regdefines::*;
 use crate::emulator::memory::Bus;
-use crate::emulator::ppu::Mode;
 use crate::emulator::ppu::pixels::GBColor::{BLACK, DGREY, LGREY, OFF, WHITE};
-use crate::settings::GLOB_SETTINGS;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum Palette {
-    BGP = BGP as isize,
-    OBP0 = OBP0 as isize,
-    OBP1 = OBP1 as isize
+    BGP = (BGP as usize) as isize,
+    OBP0 = (OBP0 as usize) as isize,
+    OBP1 = (OBP1 as usize) as isize
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
@@ -51,9 +46,9 @@ impl GBColor {
             0 => (palette & 0b00000011).into(),
             1 => ((palette & 0b00001100) >> 2).into(),
             2 => ((palette & 0b00110000) >> 4).into(),
-            4 => ((palette & 0b11000000) >> 6).into(),
+            3 => ((palette & 0b11000000) >> 6).into(),
             _ => {
-                log::error!("Invalid pixel color index found! Defaulting to WHITE.");
+                log::error!("Invalid pixel color index found ({})! Defaulting to WHITE.", pixel.color_index);
                 WHITE
             },
         }
@@ -73,6 +68,17 @@ impl PixelInfo {
             color_index: 0,
             palette: Palette::OBP0,
             priority: Priority::OBJ
+        }
+    }
+
+    pub fn from_bytes(low: u8, high: u8, index: u8, is_obj: bool, palette: Palette) -> Self {
+        let color_l = low & (0b10000000 >> index) != 0;
+        let color_h = high & (0b10000000 >> index) != 0;
+        let color = ((color_h as u8) << 1) | color_l as u8;
+        PixelInfo {
+            color_index: color,
+            palette,
+            priority: if is_obj {Priority::OBJ} else {Priority::BG}
         }
     }
 }
@@ -109,7 +115,11 @@ impl Sprite {
         (self.flags & 0b00100000) != 0
     }
 
-    pub fn palette(&self) -> u8 {
-        (self.flags & 0b00010000) >> 4
+    pub fn palette(&self) -> Palette {
+        if self.flags & 0b00010000 == 0 {
+            Palette::OBP0
+        } else {
+            Palette::OBP1
+        }
     }
 }

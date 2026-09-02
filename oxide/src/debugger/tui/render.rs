@@ -46,7 +46,7 @@ impl<'a> Ui<'a> {
         frame.render_widget(self.draw_registers(), down_split[1]);
     }
 
-    fn draw_logger(&self, width: u16, height: u16) -> Paragraph {
+    fn draw_logger(&self, width: u16, height: u16) -> Paragraph<'_> {
         if height < 2 || width < 1 {
             return Paragraph::new("")
         }
@@ -67,7 +67,7 @@ impl<'a> Ui<'a> {
                             .scroll((scroll, 0))
     }
 
-    fn draw_disassembly(&mut self, height: u16, width: u16) -> Paragraph {
+    fn draw_disassembly(&mut self, height: u16, width: u16) -> Paragraph<'_> {
         let mut lines = Vec::new();
         let addr = self.emulator.cpu.ir_pc;
         let (block, _) = self.code_map.get_block(&self.emulator.bus, &self.emulator.cpu);
@@ -110,7 +110,7 @@ impl<'a> Ui<'a> {
             .alignment(Alignment::Left)
     }
 
-    fn get_disassemble_line(instr: &[u8; 4], addr: u16,  current: bool, previous: bool) -> Line {
+    fn get_disassemble_line(instr: &[u8; 4], addr: u16,  current: bool, previous: bool) -> Line<'_> {
         let style = match (current, previous) {
             (_, true) => Style::new().fg(Color::Black).bg(Color::Rgb(74, 74, 74)),
             (true, _) => Style::new().reversed(),
@@ -128,7 +128,7 @@ impl<'a> Ui<'a> {
         Line::from(x)
     }
 
-    fn draw_registers(&self) -> Paragraph {
+    fn draw_registers(&self) -> Paragraph<'_> {
         let cpu = &self.emulator.cpu;
         let lines : Vec<Line>= vec![
             Line::from(vec![

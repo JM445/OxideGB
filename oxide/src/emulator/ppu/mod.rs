@@ -2,11 +2,11 @@ pub mod pixels;
 mod displays;
 mod fetcher;
 
-use std::collections::VecDeque;
-use crate::debugger::DebugEvent::{PpuModeChanged, SpriteScanned};
+use log::debug;
+use crate::debugger::DebugEvent::{PpuActivated, PpuModeChanged, SpriteScanned};
 use super::memory::*;
 
-use crate::debugger::Debugger;
+use crate::debugger::{DebugEvent, Debugger};
 use crate::emulator::cpu::interrupt::Interrupt;
 use crate::emulator::memory::regdefines::*;
 use crate::emulator::ppu::pixels::*;
@@ -24,6 +24,8 @@ pub struct Ppu {
 
     pixel_fetcher: PixelFetcher,
     next_x: u8,
+
+    was_on: bool,
 }
 
 #[derive(Debug, Copy, Clone, PartialOrd, PartialEq, Eq, Hash)]
@@ -41,20 +43,34 @@ impl Ppu {
             mode_dot: 0,
             pixel_fetcher: PixelFetcher::new(),
             next_x: 0,
+            was_on: false,
         }
     }
     pub fn tick<T>(&mut self, bus: &mut Bus, dbg: &mut T)
     where T: Debugger {
-        if self.frame_dot >= 70224 { // OAM Scan Mode
+        if bus.read(LCDC) & 0b10000000 == 0 {
+            self.was_on = false;
+            return;
+        }
+        if !self.was_on {
+            dbg.on_ppu_event(PpuActivated(), self, bus);
+            self.frame_dot = 0;
+            self.mode_dot = 0;
+            self.pixel_fetcher.reset_frame();
+            self.next_x = 0;
+            self.set_ppu_mode(Mode::Mode2, bus, dbg);
+            bus.set_regs(LY, 0);
+        } else if self.frame_dot >= 70224 { // OAM Scan Mode
             self.frame_dot = 0;
             bus.set_regs(LY, 0);
             self.send_frame(bus);
+            dbg.on_ppu_event(DebugEvent::FrameSent(), self, bus);
             self.set_ppu_mode(Mode::Mode2, bus, dbg);
         } else if self.frame_dot % 456 == 0 { // End of scanline, back to OAM Scan Mode or VBlank
             bus.set_regs(LY, bus.read(LY) + 1);
             if bus.read(LY) == 144 {
                 self.set_ppu_mode(Mode::Mode1, bus, dbg);
-            } else {
+            } else if bus.read(LY) < 144 {
                 self.set_ppu_mode(Mode::Mode2, bus, dbg);
             }
         } else if self.frame_dot % 456 == 80 && bus.read(LY) < 144 { // Pixel drawing mode
@@ -68,12 +84,10 @@ impl Ppu {
             Mode::Mode3 => self.tick_pixel_draw(bus, dbg),
             _ => ()
         }
-
         self.frame_dot += 1;
         self.mode_dot  += 1;
+        self.was_on = true;
     }
-
-
     fn tick_oam_scan<T>(&mut self, bus: &mut Bus, dbg: &mut T)
     where T: Debugger {
         if self.mode_dot % 2 == 0 {
@@ -92,6 +106,7 @@ impl Ppu {
         if let Some(pixel) = self.pixel_fetcher.tick(self.next_x, bus, dbg) {
             let ly = bus.read(LY) as usize;
             self.frame[ly * GB_W as usize + self.next_x as usize] = pixel;
+            debug!("Pixel Sent: X = {}, Y = {}, {}", self.next_x, bus.read(LY), pixel);
             self.next_x += 1;
         }
     }
@@ -114,20 +129,11 @@ impl Ppu {
                 bus.set_interrupt(Interrupt::VBlank);
                 self.pixel_fetcher.reset_frame();
             },
+            Mode::Mode0 => {
+                self.next_x = 0;
+            }
             _ => ()
         }
         dbg.on_ppu_event(PpuModeChanged(mode), self, bus)
-    }
-}
-
-impl Bus {
-    fn set_ppu_mode(&mut self, mode: Mode) {
-        let cur = self.ioregs[0x41] & 0b11111100;
-        self.ioregs[0x41] = cur | match mode {
-            Mode::Mode0 => 0b00,
-            Mode::Mode1 => 0b01,
-            Mode::Mode2 => 0b10,
-            Mode::Mode3 => 0b11,
-        }
     }
 }

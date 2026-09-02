@@ -15,9 +15,7 @@ use log::{debug, info, warn};
 
 use crate::emulator::internals::iomanager::IoManager;
 use crate::emulator::memory::regdefines::STAT;
-use crate::emulator::ppu;
 use crate::emulator::ppu::{Frame, Mode};
-use crate::settings::GLOB_SETTINGS;
 use std::path::Path;
 
 pub struct Bus {
@@ -80,7 +78,7 @@ impl<'a> Iterator for BusIter<'a> {
     type Item = u8;
     fn next(&mut self) -> Option<Self::Item> {
         let value = self.bus.read(self.iter_ptr);
-        self.iter_ptr += 1;
+        self.iter_ptr = self.iter_ptr.wrapping_add(1);
         Some(value)
     }
 }
@@ -157,7 +155,6 @@ impl Bus {
                 0xFF
             },
             0xFF00..=0xFF7F | 0xFFFF => self.read_regs(addr),
-            _ => 0xFF
         }
     }
     
@@ -191,7 +188,6 @@ impl Bus {
             0xC000..=0xEFFF | 0xF000..0xFE00 | 0xFF80..=0xFFFE => self.ram.write(addr, value),
             0xFEA0..=0xFEFF => warn!("Memory write to prohibited zone: {:#06X}", addr),
             0xFF00..=0xFF7F | 0xFFFF => self.write_regs(addr, value),
-            _ => ()
         }
     }
 

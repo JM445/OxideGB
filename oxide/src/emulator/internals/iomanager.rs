@@ -1,6 +1,6 @@
 use crate::emulator::memory::regdefines::JOYP;
 use crate::emulator::memory::Bus;
-use crate::emulator::ppu::{Frame, Ppu};
+use crate::emulator::ppu::Frame;
 use crossbeam_channel::Sender;
 use log::warn;
 use std::sync::atomic::{AtomicU8, Ordering};
@@ -42,7 +42,7 @@ impl IoManager {
         self.joyp.load(Ordering::Relaxed)
     }
 
-    pub fn tick(&mut self, bus: &mut Bus, frame: Option<Frame>) {
+    pub fn tick(&mut self, bus: &mut Bus) {
         // Joypad register computation
         let joystate: u8 = self.joyp.load(Ordering::Relaxed); // Get state from sdl thread
         let sel = bus.read(JOYP) & 0x30;                 // Get Register selection bits

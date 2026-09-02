@@ -39,6 +39,8 @@ pub enum DebugEvent {
     // PPU Events
     PpuModeChanged(Mode),
     SpriteScanned(Sprite),
+    FrameSent(),
+    PpuActivated(),
 }
 
 

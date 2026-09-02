@@ -80,10 +80,20 @@ impl Bus {
             _ => panic!("Unreachable")
         }
     }
-    
+
+    pub fn set_ppu_mode(&mut self, mode: Mode) {
+        let cur = self.read_regs(STAT) & 0b11111100;
+        self.ioregs[0x41] = cur | match mode {
+            Mode::Mode0 => 0b00,
+            Mode::Mode1 => 0b01,
+            Mode::Mode2 => 0b10,
+            Mode::Mode3 => 0b11,
+        }
+    }
+
     fn read_joyp(&self) -> u8 {
         let joystate = self.io_manager.get_joystate();
-        let sel = self.read(JOYP) & 0x30;             // Get Register selection bits
+        let sel = self.ioregs[0x00] & 0x30;             // Get Register selection bits
         let buttons = (sel & 0b0010_0000) == 0;     // Is buttons selected
         let dpad = (sel & 0b0001_0000) == 0;        // Is DPad selected
         let mut result: u8 = 0;

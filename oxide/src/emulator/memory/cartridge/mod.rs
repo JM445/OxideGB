@@ -9,7 +9,6 @@ use std::path::Path;
 pub trait Mbc {
     fn read(&self, rom: &[u8], ram: &[u8], addr: u16) -> u8;
     fn write(&mut self, ram: &mut [u8], addr: u16, value: u8) -> ();
-    
     fn is_writeable(&self, addr: u16) -> bool;
 }
 

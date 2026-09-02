@@ -1,11 +1,8 @@
+#[allow(unused_imports)]
 use log::{debug, info};
 use crate::emulator::memory::Bus;
 use crate::emulator::cpu::interrupt::*;
-
-const DIV: u16 = 0xFF04;
-const TIMA: u16 = 0xFF05;
-const TMA: u16 = 0xFF06;
-const TAC: u16 = 0xFF07;
+use crate::emulator::memory::regdefines::*;
 
 #[derive(Copy, Clone, Default)]
 pub struct Timer {
