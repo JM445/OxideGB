@@ -51,6 +51,15 @@ impl Debugger for FullDebugger {
     fn on_ppu_event(&mut self, event: DebugEvent, _ppu: &Ppu, _bus: &Bus) {
         debug!("FullDebugger: PPU Event received: {event:?}");
     }
+
+    fn on_timer_event(&mut self, event: DebugEvent, _timer: &Timer, _bus: &Bus) {
+        debug!("FullDebugger: Timer Event received: {event}");
+    }
+
+    fn on_dma_event(&mut self, event: DebugEvent, _dma: &OamDma, _bus: &Bus) {
+        debug!("FullDebugger: DMA Event received: {event}");
+    }
+
 }
 
 impl FullDebugger {

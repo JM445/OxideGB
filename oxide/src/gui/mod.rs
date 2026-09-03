@@ -1,5 +1,7 @@
+mod font;
+
 use std::sync::Arc;
-use std::sync::atomic::AtomicU8;
+use std::sync::atomic::{AtomicU32, AtomicU8, Ordering};
 use std::time::Duration;
 use crossbeam_channel::Receiver;
 use sdl3::{Sdl, VideoSubsystem};
@@ -8,8 +10,9 @@ use sdl3::video::WindowContext;
 use crate::emulator::ppu::Frame;
 use sdl3::event::Event;
 use sdl3::keyboard::Keycode;
-use sdl3::pixels::PixelFormatEnum;
+use sdl3::pixels::{Color, PixelFormatEnum};
 use sdl3::rect::Rect;
+use crate::gui::font::draw_text;
 use crate::settings::GLOB_SETTINGS;
 
 const BG_BYTES : &[u8] = include_bytes!("../../assets/dmg_background.png");
@@ -103,7 +106,7 @@ impl<'tc> UiAssets<'tc> {
     }
 }
 
-pub fn start_gui(rx_frame: Receiver<Frame>, _joystate: Arc<AtomicU8>) -> Result<(), Box<dyn std::error::Error>> {
+pub fn start_gui(rx_frame: Receiver<Frame>, _joystate: Arc<AtomicU8>, fps: Arc<AtomicU32>) -> Result<(), Box<dyn std::error::Error>> {
     let mut ui = UiRenderer::new()?;
     let mut assets = UiAssets::new(&ui.tex_creator)?;
     let mut event_pump = ui.sdl.event_pump()?;
@@ -122,9 +125,16 @@ pub fn start_gui(rx_frame: Receiver<Frame>, _joystate: Arc<AtomicU8>) -> Result<
             assets.write_frame(&frame)?;
         }
 
+        ui.canvas.set_draw_color(Color::RGB(0, 0, 0));
         ui.canvas.clear();
         ui.canvas.copy(&assets.frame_text, None, assets.screen_pos)?;
         ui.canvas.copy(&assets.bg_text, None, None)?;
+
+        if GLOB_SETTINGS.get().unwrap().show_fps {
+            let fps_value = fps.load(Ordering::Relaxed);
+            draw_text(&mut ui.canvas, &format!("FPS:{fps_value}"), 4, 4, 2, Color::RGB(255, 255, 255))?;
+        }
+
         ui.canvas.present();
         
         std::thread::sleep(Duration::from_millis(5));

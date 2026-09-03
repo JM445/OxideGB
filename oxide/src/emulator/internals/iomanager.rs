@@ -3,9 +3,9 @@ use crate::emulator::memory::Bus;
 use crate::emulator::ppu::Frame;
 use crossbeam_channel::Sender;
 use log::warn;
-use std::sync::atomic::{AtomicU8, Ordering};
+use std::sync::atomic::{AtomicU32, AtomicU8, Ordering};
 use std::sync::Arc;
-
+use std::time::Instant;
 /* Joypad Inputs bits:
  * A      -> 0
  * B      -> 1
@@ -21,14 +21,20 @@ use std::sync::Arc;
 pub struct IoManager {
     pub tx_frame: Sender<Frame>,
     pub joyp: Arc<AtomicU8>,
+    pub fps: Arc<AtomicU32>,
+    pub frame_count: u32,
+    pub last_sample: Instant
 }
 
 
 impl IoManager {
-    pub fn new(tx_frame: Sender<Frame>, joyp: Arc<AtomicU8>) -> IoManager {
+    pub fn new(tx_frame: Sender<Frame>, joyp: Arc<AtomicU8>, fps: Arc<AtomicU32>) -> IoManager {
         IoManager {
             tx_frame,
-            joyp
+            joyp,
+            fps,
+            frame_count: 0,
+            last_sample: Instant::now(),
         }
     }
     
@@ -36,6 +42,7 @@ impl IoManager {
         if self.tx_frame.try_send(frame).is_err() {
             warn!("Dropped a frame as UI is not ready")
         }
+        self.frame_count += 1;
     }
     
     pub fn get_joystate(&self) -> u8 {
@@ -54,6 +61,13 @@ impl IoManager {
         if dpad    {result |= (joystate >> 4) & 0xF}
         
         result = ((!result) & 0xF) | sel | 0xC0;             // Recompute the register
-        bus.write(JOYP, result);
+        bus.set_regs(JOYP, result);
+
+        // FPS Counting
+        if Instant::now().duration_since(self.last_sample).as_secs() >= 1 {
+            self.last_sample = Instant::now();
+            self.fps.store(self.frame_count, Ordering::Relaxed);
+            self.frame_count = 0;
+        }
     }
 }

@@ -1,5 +1,7 @@
 #[allow(unused_imports)]
 use log::{debug, info};
+use crate::debugger::DebugEvent::TimerInterruptRequested;
+use crate::debugger::Debugger;
 use crate::emulator::memory::Bus;
 use crate::emulator::cpu::interrupt::*;
 use crate::emulator::memory::regdefines::*;
@@ -13,7 +15,8 @@ pub struct Timer {
 impl Timer {
     
     // Should Be ticked every T cycle
-    pub fn tick(&mut self, bus: &mut Bus) {
+    pub fn tick<T>(&mut self, bus: &mut Bus, dbg: &mut T) 
+    where T: Debugger {
         self.cycles = self.cycles.wrapping_add(1);
         if bus.div_written {
             self.cycles = 0;
@@ -32,7 +35,7 @@ impl Timer {
             if tima == 0xFF {
                 bus.set_interrupt(Interrupt::Timer);
                 bus.write(TIMA, tma);
-                info!("Interrupt Requested: Timer");
+                dbg.on_timer_event(TimerInterruptRequested(), self, bus)
             } else {
                 bus.write(TIMA, tima.wrapping_add(1));
             }

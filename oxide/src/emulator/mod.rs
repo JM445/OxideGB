@@ -16,6 +16,7 @@ use crate::emulator::internals::iomanager::IoManager;
 use crate::emulator::internals::timer::Timer;
 use crate::settings::GLOB_SETTINGS;
 use std::path::Path;
+use crate::emulator::internals::dma::OamDma;
 
 pub struct Emulator {
     pub cpu: Cpu,
@@ -23,13 +24,16 @@ pub struct Emulator {
     pub ppu: Ppu,
     
     pub timer: Timer,
+    pub dma: OamDma,
+
+    pub io_manager: IoManager,
     
     pub ticks: usize
 }
 
 impl Emulator {
     pub fn new<P: AsRef<Path>>(rom_path: P, boot_path: P, io_manager: IoManager) -> Result<Self, String> {
-        let bus = Bus::new(rom_path, boot_path, io_manager)?;
+        let bus = Bus::new(rom_path, boot_path)?;
         let cpu = if bus.boot_enabled {
             Cpu::new_boot()
         } else {
@@ -45,7 +49,8 @@ impl Emulator {
             bus,
             ppu: Ppu::new(),
             timer: Timer::default(),
-            
+            dma: OamDma::default(),
+            io_manager,
             ticks: 0
         })
     }
@@ -64,11 +69,16 @@ impl Emulator {
         
         if self.ticks & 0b11 == 0 { // M-Cycle
             self.cpu.tick(&mut self.bus, dbg);
+            self.dma.tick(&mut self.bus, dbg);
         }
         
         // T-Cycle
         self.bus.tick_serial();
-        self.ppu.tick(&mut self.bus, dbg);
-        self.timer.tick(&mut self.bus);
+        if let Some(frame) = self.ppu.tick(&mut self.bus, dbg) {
+            self.io_manager.send_frame(frame);
+        }
+
+        self.timer.tick(&mut self.bus, dbg);
+        self.io_manager.tick(&mut self.bus);
     }
 }

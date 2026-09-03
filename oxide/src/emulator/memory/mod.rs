@@ -17,6 +17,7 @@ use crate::emulator::internals::iomanager::IoManager;
 use crate::emulator::memory::regdefines::STAT;
 use crate::emulator::ppu::{Frame, Mode};
 use std::path::Path;
+use crate::debugger::Debugger;
 
 pub struct Bus {
     pub cartridge: AnyCartridge,
@@ -26,7 +27,8 @@ pub struct Bus {
     pub boot_enabled: bool,
     
     pub div_written: bool,
-    pub io_manager: IoManager,
+    pub dma_pending: bool,
+    pub dma_ongoing: bool,
     
     last_stat: bool // Previous tick stat line status
 }
@@ -98,7 +100,7 @@ impl<'a> Iterator for PpuIter<'a> {
 }
 
 impl Bus {
-    pub fn new<P: AsRef<Path>>(rom_path: P, boot_path: P, io_manager: IoManager) -> Result<Self, String> {
+    pub fn new<P: AsRef<Path>>(rom_path: P, boot_path: P) -> Result<Self, String> {
         let raw = fs::read(boot_path);
         let boot_rom : [u8; 256];
         let boot_enabled : bool;
@@ -126,7 +128,8 @@ impl Bus {
             boot_enabled,
             
             div_written: false,
-            io_manager,
+            dma_pending: false,
+            dma_ongoing: false,
             
             last_stat: false,
         })
@@ -185,6 +188,30 @@ impl Bus {
             },
 
             _ => panic!("PPU should not access this address: {:06X}", addr)
+        }
+    }
+
+    pub fn dma_read(&self, addr: u16) -> u8 {
+        match addr {
+            0x0000..0x100 => {
+                if !self.boot_enabled {
+                    self.cartridge.read(addr)
+                } else {
+                    self.boot_rom[addr as usize]
+                }
+            }
+            0x0100..=0x7FFF => self.cartridge.read(addr),
+
+            // VRAM
+            0x8000..=0x9FFF => self.ram.read(addr),
+
+            // Ext Ram
+            0xA000..=0xBFFF => self.cartridge.read(addr),
+
+            // WRAM
+            0xC000..=0xDFFF => self.ram.read(addr),
+
+            _ => panic!("Invalid DMA read to address {addr:#06X} !")
         }
     }
     
@@ -284,9 +311,5 @@ impl Bus {
         }
 
         block1 == block2
-    }
-    
-    pub fn send_frame(&mut self, frame: Frame) {
-        self.io_manager.send_frame(frame);
     }
 }

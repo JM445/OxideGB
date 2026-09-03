@@ -8,18 +8,20 @@ impl Bus {
     #[allow(unused_variables, dead_code)]
     pub(super) fn read_regs(&self, addr: u16) -> u8 {
         match addr {
-            JOYP => self.read_joyp(),
             SC => {
                 if GLOB_SETTINGS.get().unwrap().doctor_logs {0x90} else {0xFF}
             }, // Temporary values to run Mooneye and GB Doctor
-            LY => self.ioregs[0x44],
+            LY | DMA => {
+                let offset = (addr - 0xFF00) as usize;
+                self.ioregs[offset]
+            },
             STAT => {
                 let mut val: u8 = self.ioregs[0x41];
                 if self.ioregs[0x40] & 0b10000000 == 0 {
                     val = val & 0b11111100;
                 }
                 val
-            }
+            },
             0xFF00..0xFF80 => self.ioregs[addr as usize - 0xFF00],
             IE => self.ioregs[0x7F],
             _ => 0x00
@@ -45,7 +47,11 @@ impl Bus {
             LYC => {
                 self.ioregs[0x45] = value;
                 self.update_stat();
-            }
+            },
+            DMA => {
+                self.dma_pending = true;
+                self.ioregs[0x46] = value;
+            },
             0xFF00..0xFF80 => self.ioregs[addr as usize - 0xFF00] = value,
             IE => self.ioregs[0x7F] = value,
             _ => ()
@@ -55,6 +61,7 @@ impl Bus {
     /* Write a value to an IoRegister without computing its value, even for non-writeable registers */
     pub fn set_regs(&mut self, addr: u16, value: u8) {
         match addr {
+            JOYP => self.ioregs[0x00] = value,
             LY => {
                 self.ioregs[0x44] = value;
                 self.update_stat();
@@ -91,19 +98,6 @@ impl Bus {
         }
     }
 
-    fn read_joyp(&self) -> u8 {
-        let joystate = self.io_manager.get_joystate();
-        let sel = self.ioregs[0x00] & 0x30;             // Get Register selection bits
-        let buttons = (sel & 0b0010_0000) == 0;     // Is buttons selected
-        let dpad = (sel & 0b0001_0000) == 0;        // Is DPad selected
-        let mut result: u8 = 0;
-
-        if buttons {result |=  joystate       & 0xF}
-        if dpad    {result |= (joystate >> 4) & 0xF}
-
-        ((!result) & 0xF) | sel | 0xC0                    // Recompute the register
-    }
-    
     fn write_joyp(&mut self, value: u8) {
         let old = self.ioregs[0x00] & 0b11001111;
         self.ioregs[0x00] = old | (value & 0b00110000);

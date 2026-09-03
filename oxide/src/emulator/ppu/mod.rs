@@ -46,11 +46,13 @@ impl Ppu {
             was_on: false,
         }
     }
-    pub fn tick<T>(&mut self, bus: &mut Bus, dbg: &mut T)
+    pub fn tick<T>(&mut self, bus: &mut Bus, dbg: &mut T) -> Option<Frame>
     where T: Debugger {
+        let mut res = None;
+
         if bus.read(LCDC) & 0b10000000 == 0 {
             self.was_on = false;
-            return;
+            return None;
         }
         if !self.was_on {
             dbg.on_ppu_event(PpuActivated(), self, bus);
@@ -63,9 +65,9 @@ impl Ppu {
         } else if self.frame_dot >= 70224 { // OAM Scan Mode
             self.frame_dot = 0;
             bus.set_regs(LY, 0);
-            self.send_frame(bus);
             dbg.on_ppu_event(DebugEvent::FrameSent(), self, bus);
             self.set_ppu_mode(Mode::Mode2, bus, dbg);
+            res = Some(std::mem::replace(&mut self.frame, vec![GBColor::OFF; FB_LEN].into_boxed_slice()));
         } else if self.frame_dot % 456 == 0 { // End of scanline, back to OAM Scan Mode or VBlank
             bus.set_regs(LY, bus.read(LY) + 1);
             self.pixel_fetcher.end_of_line();
@@ -88,6 +90,7 @@ impl Ppu {
         self.frame_dot += 1;
         self.mode_dot  += 1;
         self.was_on = true;
+        res
     }
     fn tick_oam_scan<T>(&mut self, bus: &mut Bus, dbg: &mut T)
     where T: Debugger {
@@ -113,8 +116,6 @@ impl Ppu {
     }
 
     fn send_frame(&mut self, bus: &mut Bus) {
-        let cur = std::mem::replace(&mut self.frame, vec![GBColor::OFF; FB_LEN].into_boxed_slice());
-        bus.send_frame(cur);
     }
 
     fn set_ppu_mode<T>(&mut self, mode: Mode, bus: &mut Bus, dbg: &mut T)

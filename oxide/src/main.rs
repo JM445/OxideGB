@@ -16,7 +16,7 @@ use crossbeam_channel::{bounded, Sender, Receiver};
 use debugger::tui::tui_main;
 use debugger::DummyDebugger;
 use std::fmt;
-use std::sync::atomic::AtomicU8;
+use std::sync::atomic::{AtomicU32, AtomicU8};
 use std::sync::Arc;
 use log::error;
 use crate::gui::start_gui;
@@ -98,8 +98,8 @@ fn set_settings(cli: &Cli) {
     GLOB_SETTINGS.set(Arc::new(settings)).expect("Settings already initialized !");
 }
 
-fn launch_worker(cli: Cli, tx_frame: Sender<Frame>, joystate: Arc<AtomicU8>) -> std::thread::JoinHandle<()> {
-    let io_manager = IoManager::new(tx_frame, joystate);
+fn launch_worker(cli: Cli, tx_frame: Sender<Frame>, joystate: Arc<AtomicU8>, fps: Arc<AtomicU32>) -> std::thread::JoinHandle<()> {
+    let io_manager = IoManager::new(tx_frame, joystate, fps);
 
     std::thread::spawn(move || {
         let emu_res = Emulator::new(cli.rom_path, cli.boot, io_manager);
@@ -141,10 +141,11 @@ fn main() {
     
     let (tx_frame, rx_frame) : (Sender<Frame>, Receiver<Frame>) = bounded(2);
     let joystate = Arc::new(AtomicU8::new(0));
+    let fps = Arc::new(AtomicU32::new(0));
     
-    let _ = launch_worker(cli, tx_frame, joystate.clone());
+    let _ = launch_worker(cli, tx_frame, joystate.clone(), fps.clone());
 
-    if let Err(e) = start_gui(rx_frame, joystate) {
+    if let Err(e) = start_gui(rx_frame, joystate, fps) {
         error!("SDL Error: {e}");
     }
 }

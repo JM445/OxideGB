@@ -14,6 +14,9 @@ impl fmt::Display for DebugEvent {
             DebugEvent::SpriteScanned(sprite) => format!("SpriteScanned({sprite})"),
             DebugEvent::FrameSent() => "FrameSent".to_string(),
             DebugEvent::PpuActivated() => "PpuActivated".to_string(),
+            DebugEvent::TimerInterruptRequested() => "TimerInterruptRequested".to_string(),
+            DebugEvent::DmaTransferStarted(addr) => format!("DmaTransferStarted(from: {addr:#06X})"),
+            DebugEvent::DmaTransferEnded(addr) => format!("DmaTransferEnded(from: {addr:#06X})"),
         };
 
         write!(f, "{}", s)
