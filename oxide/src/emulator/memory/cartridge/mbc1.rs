@@ -15,11 +15,11 @@ impl Mbc for Mbc1 {
         match (addr, self.bank_mode, self.ram_enable) {
             (0x0000..0x4000, false, _) => rom[addr as usize],
             (0x0000..0x4000, true, _) => {
-                let bank = self.ram_bank << 5;
+                let bank = self.rom_bank << 5;
                 rom[bank as usize * 0x4000 + addr as usize]
             }
             (0x4000..0x8000, _, _) => {
-                let mut bank = self.ram_bank & 0b11111;
+                let mut bank = self.rom_bank & 0b11111;
                 if bank == 0 {bank = 1};
                 rom[bank as usize * 0x4000 + (addr - 0x4000) as usize]
             }
@@ -40,7 +40,7 @@ impl Mbc for Mbc1 {
 
     fn write(&mut self, ram: &mut [u8], addr: u16, mut value: u8) -> () {
         match addr {
-            0x0000..0x2000 => self.ram_enable =  value & 0xF == 0xA,
+            0x0000..0x2000 => self.ram_enable = value & 0xF == 0xA,
             0x2000..0x4000 => {
                 value = value & 0b11111;
                 if value == 0 {value = 1};
@@ -49,7 +49,7 @@ impl Mbc for Mbc1 {
                 self.rom_bank = value;
             },
             0x4000..0x6000 => {
-                self.ram_count = value as usize;
+                self.ram_bank = value;
             },
             0x6000..0x8000 => self.bank_mode = (value & 1) != 0,
             0xA000..0xC000 => {

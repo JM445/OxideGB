@@ -11,7 +11,6 @@ use super::*;
 
 use std::num::Wrapping;
 
-
 #[derive(Debug, Copy, Clone)]
 pub enum MicroOp {
     DataMove   {source: RWTarget, dest: RWTarget, prefetch: bool},
@@ -92,13 +91,13 @@ impl Cpu {
             RWTarget::Indirect16D(trg) => {
                 let res = (bus.read(self.read16(trg)) as u16).clone();
                 let hl = self.read16(trg);
-                self.write16(trg, hl - 1);
+                self.write16(trg, hl.wrapping_sub(1));
                 res
             }
             RWTarget::Indirect16I(trg) => {
                 let res = (bus.read(self.read16(trg)) as u16).clone();
                 let hl = self.read16(trg);
-                self.write16(trg, hl + 1);
+                self.write16(trg, hl.wrapping_add(1));
                 res
             },
             RWTarget::HRAM(trg) => bus.read(0xFF00 + self.read8(trg) as u16) as u16,
@@ -115,12 +114,12 @@ impl Cpu {
             RWTarget::Indirect16D(trg) => {
                 bus.write(self.read16(trg), value as u8);
                 let hl = self.read16(trg);
-                self.write16(trg, hl - 1);
+                self.write16(trg, hl.wrapping_sub(1));
             }
             RWTarget::Indirect16I(trg) => {
                 bus.write(self.read16(trg), value as u8);
                 let hl = self.read16(trg);
-                self.write16(trg, hl + 1);
+                self.write16(trg, hl.wrapping_add(1));
             },
             RWTarget::HRAM(trg) => {
                 bus.write(0xFF00 + self.read8(trg) as u16, value as u8)

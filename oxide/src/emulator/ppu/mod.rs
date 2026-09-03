@@ -68,6 +68,7 @@ impl Ppu {
             self.set_ppu_mode(Mode::Mode2, bus, dbg);
         } else if self.frame_dot % 456 == 0 { // End of scanline, back to OAM Scan Mode or VBlank
             bus.set_regs(LY, bus.read(LY) + 1);
+            self.pixel_fetcher.end_of_line();
             if bus.read(LY) == 144 {
                 self.set_ppu_mode(Mode::Mode1, bus, dbg);
             } else if bus.read(LY) < 144 {
@@ -94,7 +95,7 @@ impl Ppu {
             let cur_sprite = Sprite::new(bus, (self.mode_dot / 2) as u8);
             let ysize = if (bus.read(LCDC) & 0b100) == 0 { 8u8 } else { 16u8 };
             let ly = bus.read(LY);
-            if cur_sprite.y <= ly && cur_sprite.y + ysize > ly {
+            if cur_sprite.y <= ly + 16 && cur_sprite.y + ysize > ly + 16 {
                 self.pixel_fetcher.add_sprite(cur_sprite.clone());
                 dbg.on_ppu_event(SpriteScanned(cur_sprite), self, bus);
             }

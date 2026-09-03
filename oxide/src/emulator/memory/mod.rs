@@ -74,10 +74,24 @@ pub struct BusIter<'a> {
     iter_ptr: u16
 }
 
+pub struct PpuIter<'a> {
+    bus: &'a Bus,
+    iter_ptr: u16
+}
+
 impl<'a> Iterator for BusIter<'a> {
     type Item = u8;
     fn next(&mut self) -> Option<Self::Item> {
         let value = self.bus.read(self.iter_ptr);
+        self.iter_ptr = self.iter_ptr.wrapping_add(1);
+        Some(value)
+    }
+}
+
+impl<'a> Iterator for PpuIter<'a> {
+    type Item = u8;
+    fn next(&mut self) -> Option<Self::Item> {
+        let value = self.bus.ppu_read(self.iter_ptr);
         self.iter_ptr = self.iter_ptr.wrapping_add(1);
         Some(value)
     }
@@ -157,6 +171,22 @@ impl Bus {
             0xFF00..=0xFF7F | 0xFFFF => self.read_regs(addr),
         }
     }
+
+    pub fn ppu_read(&self, addr: u16) -> u8 {
+        match addr {
+            // VRAM
+            0x8000..=0x9FFF => {
+                self.ram.read(addr)
+            },
+
+            // OAM
+            0xFE00..=0xFE9F => {
+                self.ram.read(addr)
+            },
+
+            _ => panic!("PPU should not access this address: {:06X}", addr)
+        }
+    }
     
     pub fn write(&mut self, addr: u16, value: u8) {
         #[cfg(feature = "log_mem_access")]
@@ -199,6 +229,13 @@ impl Bus {
         res[2] = self.read(addr.wrapping_add(2));
         res[3] = self.read(addr.wrapping_add(3));
         res
+    }
+
+    pub fn ppu_iter_at(&self, addr: u16) -> PpuIter<'_> {
+        PpuIter {
+            bus: &self,
+            iter_ptr: addr
+        }
     }
     
     pub fn iter_at(&self, addr: u16) -> BusIter<'_> {

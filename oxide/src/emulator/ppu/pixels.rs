@@ -94,7 +94,7 @@ pub struct Sprite {
 impl Sprite {
     pub fn new(bus: &Bus, index: u8) -> Self {
         let addr = 0xFE00 + (index as u16 * 4);
-        let mut data_iter = bus.iter_at(addr);
+        let mut data_iter = bus.ppu_iter_at(addr);
         Sprite {
             y: data_iter.next().unwrap(),
             x: data_iter.next().unwrap(),
