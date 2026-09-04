@@ -1,4 +1,5 @@
 mod font;
+pub mod inputs;
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, AtomicU8, Ordering};
@@ -13,6 +14,7 @@ use sdl3::keyboard::Keycode;
 use sdl3::pixels::{Color, PixelFormatEnum};
 use sdl3::rect::Rect;
 use crate::gui::font::draw_text;
+use crate::gui::inputs::parse_key_event;
 use crate::settings::GLOB_SETTINGS;
 
 const BG_BYTES : &[u8] = include_bytes!("../../assets/dmg_background.png");
@@ -106,7 +108,7 @@ impl<'tc> UiAssets<'tc> {
     }
 }
 
-pub fn start_gui(rx_frame: Receiver<Frame>, _joystate: Arc<AtomicU8>, fps: Arc<AtomicU32>) -> Result<(), Box<dyn std::error::Error>> {
+pub fn start_gui(rx_frame: Receiver<Frame>, joystate: Arc<AtomicU8>, fps: Arc<AtomicU32>) -> Result<(), Box<dyn std::error::Error>> {
     let mut ui = UiRenderer::new()?;
     let mut assets = UiAssets::new(&ui.tex_creator)?;
     let mut event_pump = ui.sdl.event_pump()?;
@@ -117,6 +119,12 @@ pub fn start_gui(rx_frame: Receiver<Frame>, _joystate: Arc<AtomicU8>, fps: Arc<A
                 Event::KeyDown {
                     keycode: Some(Keycode::Escape), ..
                 } => break 'main,
+                Event::KeyDown {
+                    keycode: Some(k), ..
+                } => parse_key_event(k, true, &joystate),
+                Event::KeyUp {
+                    keycode: Some(k), ..
+                } => parse_key_event(k, false, &joystate),
                 _ => {}
             }
         }
