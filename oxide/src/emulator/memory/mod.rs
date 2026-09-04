@@ -13,11 +13,11 @@ use std::hash::{DefaultHasher, Hash, Hasher};
 #[allow(unused_imports)]
 use log::{debug, info, warn};
 
-use crate::emulator::internals::iomanager::IoManager;
 use crate::emulator::memory::regdefines::STAT;
-use crate::emulator::ppu::{Frame, Mode};
+use crate::emulator::ppu::Mode;
 use std::path::Path;
-use crate::debugger::Debugger;
+use std::sync::Arc;
+use std::sync::atomic::AtomicU8;
 
 pub struct Bus {
     pub cartridge: AnyCartridge,
@@ -30,7 +30,8 @@ pub struct Bus {
     pub dma_pending: bool,
     pub dma_ongoing: bool,
     
-    last_stat: bool // Previous tick stat line status
+    last_stat: bool, // Previous tick stat line status
+    joyp: Arc<AtomicU8>,
 }
 
 #[derive(Debug, Copy, Clone, PartialOrd, PartialEq, Eq, Hash)]
@@ -100,7 +101,7 @@ impl<'a> Iterator for PpuIter<'a> {
 }
 
 impl Bus {
-    pub fn new<P: AsRef<Path>>(rom_path: P, boot_path: P) -> Result<Self, String> {
+    pub fn new<P: AsRef<Path>>(rom_path: P, boot_path: P, joyp: Arc<AtomicU8>) -> Result<Self, String> {
         let raw = fs::read(boot_path);
         let boot_rom : [u8; 256];
         let boot_enabled : bool;
@@ -132,6 +133,7 @@ impl Bus {
             dma_ongoing: false,
             
             last_stat: false,
+            joyp,
         })
     }
 

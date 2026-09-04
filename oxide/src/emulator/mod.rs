@@ -33,7 +33,7 @@ pub struct Emulator {
 
 impl Emulator {
     pub fn new<P: AsRef<Path>>(rom_path: P, boot_path: P, io_manager: IoManager) -> Result<Self, String> {
-        let bus = Bus::new(rom_path, boot_path)?;
+        let bus = Bus::new(rom_path, boot_path, io_manager.joyp.clone())?;
         let cpu = if bus.boot_enabled {
             Cpu::new_boot()
         } else {
@@ -79,6 +79,5 @@ impl Emulator {
         }
 
         self.timer.tick(&mut self.bus, dbg);
-        self.io_manager.tick(&mut self.bus);
     }
 }

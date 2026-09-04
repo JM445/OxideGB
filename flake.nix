@@ -34,6 +34,9 @@
 
               # SDL3
               pkgs.sdl3
+
+              # Degug tools
+              pkgs.samply # Profiler
             ];
 
             shellHook = ''

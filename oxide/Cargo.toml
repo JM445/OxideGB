@@ -18,3 +18,8 @@ image = "0.25.6"
 
 [features]
 log_mem_access = []
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+panic = "abort"

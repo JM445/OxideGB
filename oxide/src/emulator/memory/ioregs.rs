@@ -1,3 +1,4 @@
+use std::sync::atomic::Ordering;
 use crate::emulator::memory::regdefines::*;
 use crate::emulator::memory::Bus;
 use crate::emulator::ppu::Mode;
@@ -8,6 +9,19 @@ impl Bus {
     #[allow(unused_variables, dead_code)]
     pub(super) fn read_regs(&self, addr: u16) -> u8 {
         match addr {
+            JOYP => {
+                // Joypad register computation
+                let joystate: u8 = self.joyp.load(Ordering::Relaxed); // Get state from sdl thread
+                let sel = self.ioregs[0x00] & 0x30;              // Get Register selection bits
+                let buttons = (sel & 0b0010_0000) == 0;         // Is buttons selected
+                let dpad = (sel & 0b0001_0000) == 0;            // Is DPad selected
+                let mut result: u8 = 0;
+
+                if buttons {result |=  joystate       & 0xF}
+                if dpad    {result |= (joystate >> 4) & 0xF}
+
+                ((!result) & 0xF) | sel | 0xC0             // Recompute the register
+            }
             SC => {
                 if GLOB_SETTINGS.get().unwrap().doctor_logs {0x90} else {0xFF}
             }, // Temporary values to run Mooneye and GB Doctor
